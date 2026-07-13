@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<!-- saved from url=(0051)file:///C:/Users/kanik/Downloads/face-puzzle_1.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Face Puzzle</title>
+<style>
+  :root{
+    --bg1:#1e1b4b;
+    --bg2:#4c1d95;
+    --accent:#8b5cf6;
+    --accent2:#ec4899;
+    --panel:#ffffff;
+    --panel-dim:rgba(255,255,255,0.08);
+    --text-dark:#1f2937;
+    --text-light:#f3f4f6;
+    --success:#22c55e;
+    --danger:#ef4444;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:'Segoe UI',Roboto,-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    background:radial-gradient(circle at 20% 20%, #4c1d95 0%, #1e1b4b 45%, #0f0c29 100%);
+    color:var(--text-light);
+    -webkit-tap-highlight-color:transparent;
+    overflow-x:hidden;
+  }
+  #app{
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:20px 14px 40px;
+  }
+  h1.title{
+    font-size:clamp(22px,5vw,34px);
+    margin:6px 0 4px;
+    font-weight:800;
+    background:linear-gradient(90deg,#fbbf24,#ec4899,#8b5cf6);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-align:center;
+    letter-spacing:0.5px;
+  }
+  p.subtitle{
+    margin:0 0 20px;
+    color:#d1d5db;
+    font-size:14px;
+    text-align:center;
+    max-width:480px;
+  }
+  .screen{
+    width:100%;
+    max-width:560px;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    animation:fadeIn 0.35s ease;
+  }
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+  .panel{
+    background:var(--panel-dim);
+    backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:var(--radius);
+    padding:20px;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    box-shadow:0 10px 40px rgba(0,0,0,0.35);
+  }
+
+  .video-wrap{
+    position:relative;
+    width:100%;
+    max-width:480px;
+    aspect-ratio:1/1;
+    border-radius:16px;
+    overflow:hidden;
+    background:#000;
+    box-shadow:0 6px 24px rgba(0,0,0,0.5);
+    border:3px solid rgba(255,255,255,0.15);
+  }
+  video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    transform:scaleX(-1);
+    display:block;
+  }
+  .face-guide{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    border-radius:50%;
+    margin:auto;
+    width:70%;
+    height:70%;
+    top:0;bottom:0;left:0;right:0;
+    border:3px dashed rgba(255,255,255,0.5);
+  }
+
+  .btn{
+    border:none;
+    outline:none;
+    cursor:pointer;
+    font-weight:700;
+    font-size:15px;
+    padding:13px 26px;
+    border-radius:14px;
+    color:#fff;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    box-shadow:0 6px 16px rgba(139,92,246,0.4);
+    transition:transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    margin:6px;
+    -webkit-user-select:none;user-select:none;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(139,92,246,0.55);}
+  .btn:active{transform:translateY(0);}
+  .btn:disabled{opacity:0.45;cursor:not-allowed;transform:none;box-shadow:none;}
+  .btn.secondary{
+    background:rgba(255,255,255,0.1);
+    box-shadow:none;
+    border:1px solid rgba(255,255,255,0.25);
+  }
+  .btn.secondary:hover{background:rgba(255,255,255,0.18);}
+  .btn.ghost{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.3);
+    box-shadow:none;
+    font-size:13px;
+    padding:9px 16px;
+  }
+
+  .btn-row{display:flex;flex-wrap:wrap;justify-content:center;margin-top:16px;}
+
+  /* ---- Camera error ---- */
+  .error-box{
+    margin-top:14px;
+    background:rgba(239,68,68,0.15);
+    border:1px solid rgba(239,68,68,0.5);
+    color:#fecaca;
+    padding:12px 16px;
+    border-radius:12px;
+    font-size:13px;
+    text-align:center;
+    display:none;
+    width:100%;
+  }
+  .upload-fallback{
+    margin-top:10px;
+    font-size:13px;
+    color:#d1d5db;
+    text-align:center;
+  }
+  .upload-fallback input{
+    display:block;
+    margin:8px auto 0;
+    color:#e5e7eb;
+  }
+
+  /* ---- Photo preview / difficulty ---- */
+  #previewCanvas{
+    width:100%;
+    max-width:420px;
+    aspect-ratio:1/1;
+    border-radius:16px;
+    border:3px solid rgba(255,255,255,0.15);
+    box-shadow:0 6px 24px rgba(0,0,0,0.5);
+  }
+  .diff-row{
+    display:flex;
+    gap:12px;
+    margin-top:20px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .diff-btn{
+    width:96px;
+    padding:16px 10px;
+    border-radius:14px;
+    background:rgba(255,255,255,0.08);
+    border:2px solid rgba(255,255,255,0.2);
+    color:#fff;
+    cursor:pointer;
+    text-align:center;
+    transition:all 0.15s ease;
+  }
+  .diff-btn:hover{border-color:var(--accent);background:rgba(139,92,246,0.25);transform:translateY(-2px);}
+  .diff-btn .num{font-size:24px;font-weight:800;display:block;}
+  .diff-btn .lbl{font-size:11px;color:#c4b5fd;text-transform:uppercase;letter-spacing:0.5px;}
+
+  /* ---- Game screen ---- */
+  .hud{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:14px;
+    background:rgba(255,255,255,0.07);
+    border-radius:14px;
+    padding:10px 16px;
+    border:1px solid rgba(255,255,255,0.12);
+  }
+  .hud-item{
+    text-align:center;
+    min-width:70px;
+  }
+  .hud-item .val{
+    font-size:18px;
+    font-weight:800;
+    font-variant-numeric:tabular-nums;
+  }
+  .hud-item .lbl{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:#c4b5fd;
+  }
+
+  #board{
+    display:grid;
+    width:min(92vw,480px);
+    aspect-ratio:1/1;
+    gap:2px;
+    background:#000;
+    border-radius:14px;
+    overflow:hidden;
+    box-shadow:0 10px 36px rgba(0,0,0,0.5);
+    border:3px solid rgba(255,255,255,0.15);
+    touch-action:none;
+  }
+  .piece-cell{
+    position:relative;
+    background-repeat:no-repeat;
+    cursor:grab;
+    border:2px solid rgba(0,0,0,0.35);
+    box-sizing:border-box;
+    transition:transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    will-change:transform;
+  }
+  .piece-cell.dragging{
+    cursor:grabbing;
+    border-color:#3b82f6;
+    box-shadow:0 0 0 3px #3b82f6, 0 10px 20px rgba(0,0,0,0.5);
+  }
+  .piece-cell.correct{
+    border-color:var(--success);
+    box-shadow:inset 0 0 0 2px var(--success);
+  }
+
+  .game-btn-row{margin-top:16px;}
+
+  /* ---- Win overlay ---- */
+  #winOverlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(10,8,20,0.82);
+    backdrop-filter:blur(6px);
+    z-index:200;
+    align-items:center;
+    justify-content:center;
+    padding:16px;
+  }
+  #winOverlay.active{display:flex;}
+  .win-card{
+    background:linear-gradient(160deg,#2e1065,#1e1b4b);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:22px;
+    padding:28px 24px;
+    max-width:420px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6);
+    animation:popIn 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn{from{transform:scale(0.8);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .win-card h2{
+    font-size:26px;
+    margin:0 0 4px;
+    background:linear-gradient(90deg,#fbbf24,#ec4899);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .win-stats{
+    display:flex;
+    justify-content:space-around;
+    margin:18px 0;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .win-stat{
+    background:rgba(255,255,255,0.08);
+    border-radius:12px;
+    padding:10px 16px;
+    min-width:90px;
+  }
+  .win-stat .v{font-size:20px;font-weight:800;}
+  .win-stat .l{font-size:10px;color:#c4b5fd;text-transform:uppercase;}
+
+  table.leaderboard{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+    font-size:13px;
+  }
+  table.leaderboard th, table.leaderboard td{
+    padding:7px 6px;
+    text-align:center;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+  }
+  table.leaderboard th{
+    color:#c4b5fd;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+  }
+  .lb-tabs{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    margin-top:16px;
+  }
+  .lb-tab{
+    padding:6px 14px;
+    border-radius:10px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.15);
+    cursor:pointer;
+    font-size:12px;
+    color:#e5e7eb;
+  }
+  .lb-tab.active{background:var(--accent);border-color:var(--accent);}
+  .empty-lb{
+    color:#9ca3af;
+    font-size:13px;
+    padding:14px 0;
+  }
+  canvas#hiddenCanvas{display:none;}
+
+  @media (max-width:480px){
+    .win-stat{min-width:70px;padding:8px 10px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1 class="title">🧩 Face Puzzle</h1>
+  <p class="subtitle">Snap a selfie, scramble it into a puzzle, and race the clock to put your face back together.</p>
+
+  <!-- CAMERA SCREEN -->
+  <div class="screen active" id="screen-camera">
+    <div class="panel">
+      <div class="video-wrap">
+        <video id="video" autoplay="" playsinline="" muted=""></video>
+        <div class="face-guide"></div>
+      </div>
+      <div class="error-box" id="cameraError" style="display: block;">Camera permission was denied. Please allow camera access in your browser settings and retry, or upload a photo instead.</div>
+      <div class="btn-row">
+        <button class="btn" id="takePhotoBtn" disabled="">📸 Take Photo</button>
+        <button class="btn secondary" id="retryCameraBtn" style="display: inline-block;">🔄 Retry Camera</button>
+      </div>
+      <div class="upload-fallback" id="uploadFallback" style="display: block;">
+        Or upload a photo instead:
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      <button class="btn ghost" id="showLeaderboardBtnTop">🏆 View Leaderboard</button>
+    </div>
+  </div>
+
+  <!-- PHOTO PREVIEW / DIFFICULTY SCREEN -->
+  <div class="screen" id="screen-photo">
+    <div class="panel">
+      <canvas id="previewCanvas" width="600" height="600"></canvas>
+      <div class="diff-row" id="diffRow">
+        <div class="diff-btn" data-n="3"><span class="num">3×3</span><span class="lbl">Easy</span></div>
+        <div class="diff-btn" data-n="4"><span class="num">4×4</span><span class="lbl">Medium</span></div>
+        <div class="diff-btn" data-n="5"><span class="num">5×5</span><span class="lbl">Hard</span></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn secondary" id="retakeBtn">↩️ Retake Photo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="screen" id="screen-game">
+    <div class="hud">
+      <div class="hud-item"><div class="val" id="hudTime">00:00.0</div><div class="lbl">Time</div></div>
+      <div class="hud-item"><div class="val" id="hudMoves">0</div><div class="lbl">Moves</div></div>
+      <div class="hud-item"><div class="val" id="hudCorrect">0/0</div><div class="lbl">Correct</div></div>
+      <div class="hud-item"><div class="val" id="hudDiff">3×3</div><div class="lbl">Level</div></div>
+    </div>
+    <div id="board"></div>
+    <div class="btn-row game-btn-row">
+      <button class="btn secondary" id="shuffleAgainBtn">🔀 Reshuffle</button>
+      <button class="btn secondary" id="newPhotoBtn">🖼️ New Photo</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="hiddenCanvas" width="600" height="600"></canvas>
+
+<!-- WIN OVERLAY -->
+<div id="winOverlay">
+  <div class="win-card">
+    <h2>🎉 Puzzle Solved!</h2>
+    <p style="color:#d1d5db;margin:4px 0 0;font-size:13px;">Great job putting your face back together.</p>
+    <div class="win-stats">
+      <div class="win-stat"><div class="v" id="finalTime">00:00.0</div><div class="l">Time</div></div>
+      <div class="win-stat"><div class="v" id="finalMoves">0</div><div class="l">Moves</div></div>
+      <div class="win-stat"><div class="v" id="finalDiff">3×3</div><div class="l">Level</div></div>
+    </div>
+
+    <div class="lb-tabs" id="lbTabs">
+      <div class="lb-tab" data-n="3">3×3</div>
+      <div class="lb-tab" data-n="4">4×4</div>
+      <div class="lb-tab" data-n="5">5×5</div>
+    </div>
+    <div id="leaderboardWrap"></div>
+
+    <div class="btn-row">
+      <button class="btn" id="playAgainBtn">🔁 Play Again</button>
+      <button class="btn secondary" id="winNewPhotoBtn">🖼️ New Photo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // ---------- STATE ----------
+  let stream = null;
+  let capturedDataURL = null;
+  let n = 3;
+  let cellElements = [];
+  let pieceSize = 0;
+  let moveCount = 0;
+  let gameActive = false;
+  let startTime = 0;
+  let elapsedMs = 0;
+  let timerInterval = null;
+  let dragState = null;
+  let currentLbTab = 3;
+
+  // ---------- DOM ----------
+  const screens = {
+    camera: document.getElementById('screen-camera'),
+    photo: document.getElementById('screen-photo'),
+    game: document.getElementById('screen-game')
+  };
+  const video = document.getElementById('video');
+  const takePhotoBtn = document.getElementById('takePhotoBtn');
+  const retryCameraBtn = document.getElementById('retryCameraBtn');
+  const cameraError = document.getElementById('cameraError');
+  const uploadFallback = document.getElementById('uploadFallback');
+  const fileInput = document.getElementById('fileInput');
+  const previewCanvas = document.getElementById('previewCanvas');
+  const hiddenCanvas = document.getElementById('hiddenCanvas');
+  const diffRow = document.getElementById('diffRow');
+  const retakeBtn = document.getElementById('retakeBtn');
+  const board = document.getElementById('board');
+  const hudTime = document.getElementById('hudTime');
+  const hudMoves = document.getElementById('hudMoves');
+  const hudCorrect = document.getElementById('hudCorrect');
+  const hudDiff = document.getElementById('hudDiff');
+  const shuffleAgainBtn = document.getElementById('shuffleAgainBtn');
+  const newPhotoBtn = document.getElementById('newPhotoBtn');
+  const winOverlay = document.getElementById('winOverlay');
+  const finalTime = document.getElementById('finalTime');
+  const finalMoves = document.getElementById('finalMoves');
+  const finalDiff = document.getElementById('finalDiff');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const winNewPhotoBtn = document.getElementById('winNewPhotoBtn');
+  const lbTabs = document.getElementById('lbTabs');
+  const leaderboardWrap = document.getElementById('leaderboardWrap');
+  const showLeaderboardBtnTop = document.getElementById('showLeaderboardBtnTop');
+
+  function showScreen(name){
+    Object.values(screens).forEach(s=>s.classList.remove('active'));
+    screens[name].classList.add('active');
+  }
+
+  // ---------- CAMERA ----------
+  async function initCamera(){
+    cameraError.style.display = 'none';
+    retryCameraBtn.style.display = 'none';
+    uploadFallback.style.display = 'none';
+    takePhotoBtn.disabled = true;
+    try{
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+        throw new Error('NOT_SUPPORTED');
+      }
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 720 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      takePhotoBtn.disabled = false;
+    }catch(err){
+      handleCameraError(err);
+    }
+  }
+
+  function handleCameraError(err){
+    let msg = 'We could not access your camera.';
+    if (err && err.name === 'NotAllowedError'){
+      msg = 'Camera permission was denied. Please allow camera access in your browser settings and retry, or upload a photo instead.';
+    } else if (err && err.name === 'NotFoundError'){
+      msg = 'No camera was found on this device. You can upload a photo instead.';
+    } else if (err && err.message === 'NOT_SUPPORTED'){
+      msg = 'Your browser does not support camera access. Please use Chrome, Firefox, or Safari over HTTPS, or upload a photo instead.';
+    } else if (err && err.name === 'NotReadableError'){
+      msg = 'Your camera is already in use by another application. Please close it and retry, or upload a photo instead.';
+    }
+    cameraError.textContent = msg;
+    cameraError.style.display = 'block';
+    retryCameraBtn.style.display = 'inline-block';
+    uploadFallback.style.display = 'block';
+    takePhotoBtn.disabled = true;
+  }
+
+  function stopStream(){
+    if (stream){
+      stream.getTracks().forEach(t=>t.stop());
+      stream = null;
+    }
+  }
+
+  takePhotoBtn.addEventListener('click', ()=>{
+    const size = Math.min(video.videoWidth, video.videoHeight) || 480;
+    const sx = (video.videoWidth - size)/2;
+    const sy = (video.videoHeight - size)/2;
+    const ctx = hiddenCanvas.getContext('2d');
+    hiddenCanvas.width = 600;
+    hiddenCanvas.height = 600;
+    ctx.save();
+    ctx.translate(600,0);
+    ctx.scale(-1,1);
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 600, 600);
+    ctx.restore();
+    capturedDataURL = hiddenCanvas.toDataURL('image/png');
+    finishCapture();
+  });
+
+  retryCameraBtn.addEventListener('click', initCamera);
+
+  fileInput.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      img.onload = ()=>{
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size)/2;
+        const sy = (img.height - size)/2;
+        const ctx = hiddenCanvas.getContext('2d');
+        hiddenCanvas.width = 600;
+        hiddenCanvas.height = 600;
+        ctx.clearRect(0,0,600,600);
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 600, 600);
+        capturedDataURL = hiddenCanvas.toDataURL('image/png');
+        finishCapture();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function finishCapture(){
+    stopStream();
+    const pctx = previewCanvas.getContext('2d');
+    previewCanvas.width = 600;
+    previewCanvas.height = 600;
+    const img = new Image();
+    img.onload = ()=> pctx.drawImage(img,0,0,600,600);
+    img.src = capturedDataURL;
+    showScreen('photo');
+  }
+
+  retakeBtn.addEventListener('click', ()=>{
+    showScreen('camera');
+    initCamera();
+  });
+
+  // ---------- DIFFICULTY / PUZZLE BUILD ----------
+  diffRow.querySelectorAll('.diff-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      n = parseInt(btn.dataset.n, 10);
+      startPuzzle();
+    });
+  });
+
+  function startPuzzle(){
+    hudDiff.textContent = n + '×' + n;
+    showScreen('game');
+    buildBoard();
+    moveCount = 0;
+    hudMoves.textContent = '0';
+    gameActive = true;
+    startTimer();
+  }
+
+  function shuffle(arr){
+    for (let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function isSolved(arr){
+    return arr.every((v,i)=> v === i);
+  }
+
+  function buildBoard(){
+    board.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    board.style.gridTemplateRows = `repeat(${n}, 1fr)`;
+
+    const total = n*n;
+    let ids = [...Array(total).keys()];
+    let attempts = 0;
+    do{
+      shuffle(ids);
+      attempts++;
+    } while ((isSolved(ids) || countCorrectArr(ids) > total - 2) && attempts < 200);
+
+    cellElements = [];
+    for (let i = 0; i < total; i++){
+      const cell = document.createElement('div');
+      cell.className = 'piece-cell';
+      cell.dataset.index = i;
+      cell.dataset.pieceId = ids[i];
+      cell.style.backgroundImage = `url(${capturedDataURL})`;
+      attachPointerHandlers(cell);
+      board.appendChild(cell);
+      cellElements.push(cell);
+    }
+    requestAnimationFrame(()=>{
+      recalcSizes();
+      cellElements.forEach(updateCellVisual);
+      updateHudCorrect();
+    });
+  }
+
+  function countCorrectArr(arr){
+    let c = 0;
+    arr.forEach((v,i)=>{ if (v===i) c++; });
+    return c;
+  }
+
+  function recalcSizes(){
+    const boardWidth = board.clientWidth;
+    pieceSize = boardWidth / n;
+    cellElements.forEach(c=>{
+      c.style.backgroundSize = `${boardWidth}px ${boardWidth}px`;
+    });
+  }
+
+  function updateCellVisual(cell){
+    const pieceId = parseInt(cell.dataset.pieceId, 10);
+    const cellIndex = parseInt(cell.dataset.index, 10);
+    const col = pieceId % n;
+    const row = Math.floor(pieceId / n);
+    cell.style.backgroundPosition = `-${col*pieceSize}px -${row*pieceSize}px`;
+    const isCorrect = pieceId === cellIndex;
+    cell.classList.toggle('correct', isCorrect);
+  }
+
+  window.addEventListener('resize', ()=>{
+    if (screens.game.classList.contains('active')){
+      recalcSizes();
+      cellElements.forEach(updateCellVisual);
+    }
+  });
+
+  // ---------- DRAG / TOUCH (Pointer Events unify mouse + touch) ----------
+  function attachPointerHandlers(cell){
+    cell.addEventListener('pointerdown', onPointerDown);
+    cell.addEventListener('pointermove', onPointerMove);
+    cell.addEventListener('pointerup', onPointerUp);
+    cell.addEventListener('pointercancel', onPointerUp);
+  }
+
+  function onPointerDown(e){
+    if (!gameActive) return;
+    e.preventDefault();
+    const cell = e.currentTarget;
+    try { cell.setPointerCapture(e.pointerId); } catch(err){}
+    dragState = {
+      cell,
+      startX: e.clientX,
+      startY: e.clientY,
+      pointerId: e.pointerId
+    };
+    cell.classList.add('dragging');
+    cell.style.zIndex = 50;
+    cell.style.transition = 'none';
+  }
+
+  function onPointerMove(e){
+    if (!dragState || e.pointerId !== dragState.pointerId) return;
+    e.preventDefault();
+    const dx = e.clientX - dragState.startX;
+    const dy = e.clientY - dragState.startY;
+    dragState.cell.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+
+  function onPointerUp(e){
+    if (!dragState || e.pointerId !== dragState.pointerId) return;
+    const cell = dragState.cell;
+    try { cell.releasePointerCapture(e.pointerId); } catch(err){}
+    cell.classList.remove('dragging');
+    cell.style.zIndex = '';
+    cell.style.transition = 'transform 0.18s ease';
+    cell.style.transform = 'translate(0px, 0px)';
+
+    const target = findCellAt(e.clientX, e.clientY, cell);
+    if (target && target !== cell){
+      swapCells(cell, target);
+    }
+    dragState = null;
+  }
+
+  function findCellAt(x, y, excludeCell){
+    for (const c of cellElements){
+      if (c === excludeCell) continue;
+      const r = c.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom){
+        return c;
+      }
+    }
+    return null;
+  }
+
+  function swapCells(a, b){
+    const tmp = a.dataset.pieceId;
+    a.dataset.pieceId = b.dataset.pieceId;
+    b.dataset.pieceId = tmp;
+    updateCellVisual(a);
+    updateCellVisual(b);
+    moveCount++;
+    hudMoves.textContent = moveCount;
+    updateHudCorrect();
+    checkWin();
+  }
+
+  function updateHudCorrect(){
+    const correct = cellElements.filter(c=>c.classList.contains('correct')).length;
+    hudCorrect.textContent = `${correct}/${cellElements.length}`;
+    return correct;
+  }
+
+  function checkWin(){
+    const correct = updateHudCorrect();
+    if (correct === cellElements.length){
+      gameActive = false;
+      stopTimer();
+      showWin();
+    }
+  }
+
+  // ---------- TIMER ----------
+  function startTimer(){
+    startTime = performance.now();
+    elapsedMs = 0;
+    clearInterval(timerInterval);
+    timerInterval = setInterval(()=>{
+      elapsedMs = performance.now() - startTime;
+      hudTime.textContent = formatTime(elapsedMs);
+    }, 100);
+  }
+
+  function stopTimer(){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  function pad(num){ return String(num).padStart(2,'0'); }
+
+  function formatTime(ms){
+    const totalTenths = Math.floor(ms/100);
+    const tenths = totalTenths % 10;
+    const totalSeconds = Math.floor(totalTenths/10);
+    const seconds = totalSeconds % 60;
+    const minutes = Math.floor(totalSeconds/60);
+    return `${pad(minutes)}:${pad(seconds)}.${tenths}`;
+  }
+
+  // ---------- RESHUFFLE / NEW PHOTO ----------
+  shuffleAgainBtn.addEventListener('click', ()=>{
+    startPuzzle();
+  });
+
+  newPhotoBtn.addEventListener('click', goNewPhoto);
+  winNewPhotoBtn.addEventListener('click', ()=>{
+    winOverlay.classList.remove('active');
+    goNewPhoto();
+  });
+
+  function goNewPhoto(){
+    gameActive = false;
+    stopTimer();
+    showScreen('camera');
+    initCamera();
+  }
+
+  // ---------- WIN OVERLAY ----------
+  function showWin(){
+    finalTime.textContent = formatTime(elapsedMs);
+    finalMoves.textContent = moveCount;
+    finalDiff.textContent = n + '×' + n;
+    saveScore(n, elapsedMs, moveCount);
+    currentLbTab = n;
+    renderLbTabs();
+    renderLeaderboard(currentLbTab);
+    winOverlay.classList.add('active');
+  }
+
+  playAgainBtn.addEventListener('click', ()=>{
+    winOverlay.classList.remove('active');
+    startPuzzle();
+  });
+
+  // ---------- LEADERBOARD ----------
+  const LB_KEY = 'facePuzzleLeaderboard';
+
+  function loadLeaderboardData(){
+    try{
+      return JSON.parse(localStorage.getItem(LB_KEY) || '{}');
+    }catch(e){
+      return {};
+    }
+  }
+
+  function saveScore(size, timeMs, moves){
+    const data = loadLeaderboardData();
+    const key = `${size}x${size}`;
+    if (!data[key]) data[key] = [];
+    data[key].push({
+      date: new Date().toLocaleDateString(),
+      time: Math.round(timeMs),
+      moves: moves,
+      difficulty: key
+    });
+    data[key].sort((a,b)=> a.time - b.time);
+    data[key] = data[key].slice(0,5);
+    localStorage.setItem(LB_KEY, JSON.stringify(data));
+  }
+
+  function renderLbTabs(){
+    lbTabs.querySelectorAll('.lb-tab').forEach(t=>{
+      t.classList.toggle('active', parseInt(t.dataset.n,10) === currentLbTab);
+    });
+  }
+
+  lbTabs.querySelectorAll('.lb-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      currentLbTab = parseInt(tab.dataset.n, 10);
+      renderLbTabs();
+      renderLeaderboard(currentLbTab);
+    });
+  });
+
+  function renderLeaderboard(size){
+    const data = loadLeaderboardData();
+    const key = `${size}x${size}`;
+    const list = data[key] || [];
+    if (list.length === 0){
+      leaderboardWrap.innerHTML = `<div class="empty-lb">No best times yet for ${key}. Be the first!</div>`;
+      return;
+    }
+    let html = `<table class="leaderboard"><thead><tr>
+      <th>#</th><th>Time</th><th>Moves</th><th>Date</th>
+    </tr></thead><tbody>`;
+    list.forEach((entry, idx)=>{
+      html += `<tr>
+        <td>${idx+1}</td>
+        <td>${formatTime(entry.time)}</td>
+        <td>${entry.moves}</td>
+        <td>${entry.date}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    leaderboardWrap.innerHTML = html;
+  }
+
+  showLeaderboardBtnTop.addEventListener('click', ()=>{
+    currentLbTab = n || 3;
+    renderLbTabs();
+    renderLeaderboard(currentLbTab);
+    finalTime.textContent = '--:--.-';
+    finalMoves.textContent = '-';
+    finalDiff.textContent = '-';
+    winOverlay.classList.add('active');
+  });
+
+  // ---------- INIT ----------
+  initCamera();
+
+})();
+</script>
+
+
+</body></html>
