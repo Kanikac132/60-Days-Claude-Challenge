@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prior Authorization Story Simulator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* ===================================================================
+     DESIGN SYSTEM — same family as the Prior Authorization Workflow
+     Simulator: navy/blue palette, serif headings, monospace data labels,
+     paper-white cards. Kept as a small stylesheet for the pieces Tailwind
+     utilities can't express (keyframes, the progress-tracker connectors,
+     custom fonts).
+     =================================================================== */
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #122a4d, #071427 60%);
+  }
+  .font-head{ font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; }
+  .font-data{ font-family:"Courier New",ui-monospace,SFMono-Regular,Menlo,monospace; }
+
+  /* progress tracker connectors (re-used from the workflow simulator) */
+  .tstep{ position:relative; flex:1 1 0; min-width:70px; }
+  .tstep::before{
+    content:""; position:absolute; top:14px; left:-50%; width:100%; height:2px;
+    background:#1d4f8f; z-index:0;
+  }
+  .tstep:first-child::before{ content:none; }
+  .tstep.done::before{ background:#63a3d6; }
+
+  /* message entrance animation */
+  @keyframes riseIn{
+    from{ opacity:0; transform:translateY(10px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .msg-in{ animation:riseIn .35s ease both; }
+
+  @keyframes pulseGlow{
+    0%,100%{ box-shadow:0 0 0 0 rgba(99,163,214,.5); }
+    50%{ box-shadow:0 0 0 8px rgba(99,163,214,0); }
+  }
+  .glow-pulse{ animation:pulseGlow 1.8s ease-in-out infinite; }
+
+  /* thin scrollbar for the chat feed */
+  #chatFeed::-webkit-scrollbar{ width:8px; }
+  #chatFeed::-webkit-scrollbar-thumb{ background:#9cc4e6; border-radius:8px; }
+  #chatFeed::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body class="min-h-screen pb-16">
+
+<!-- ============================== HEADER ============================== -->
+<header class="max-w-3xl mx-auto px-4 pt-8 pb-4">
+  <p class="font-data text-[11px] tracking-[.2em] text-blue-300 uppercase mb-1">Healthcare Education &middot; Interactive Story</p>
+  <h1 class="font-head text-3xl sm:text-4xl font-bold text-white">Prior Authorization Story Simulator</h1>
+  <p class="text-blue-200 text-sm sm:text-base mt-2">
+    Follow Rahul and Priya through a real Prior Authorization journey — told one message at a time.
+  </p>
+
+  <!-- progress tracker -->
+  <div id="progressTracker" class="flex mt-6 bg-white/5 border border-white/15 rounded-xl px-3 py-4 overflow-x-auto"></div>
+</header>
+
+<!-- ============================== MAIN ============================== -->
+<main class="max-w-3xl mx-auto px-4">
+  <div class="bg-white rounded-2xl border border-[#c6d8ea] shadow-xl overflow-hidden">
+
+    <!-- chat feed: append-only. Never innerHTML = here. -->
+    <div id="chatFeed" class="flex flex-col gap-3 p-4 sm:p-6 max-h-[65vh] overflow-y-auto scroll-smooth"></div>
+
+    <!-- choice / continue controls -->
+    <div id="choiceArea" class="border-t border-[#e4eef8] bg-[#f6f9fc] p-4 sm:p-5 flex flex-col sm:flex-row gap-3"></div>
+  </div>
+
+  <p class="text-blue-300 text-xs font-data mt-4 text-center leading-relaxed">
+    StarCare Health is a fictional payer used only to illustrate how Prior Authorization works.<br>
+    This story is an educational simulation and does not represent real patients, providers, or insurers.
+  </p>
+</main>
+
+<script>
+/* ========================================================================
+   1. STORY DATA
+   Each scene is a short block of narrative / dialogue messages, followed
+   by two choices. A choice adds a short exchange (Rahul asks, someone
+   answers) before the story continues to the next scene.
+   Message types:
+     'rahul'    -> chat bubble, left
+     'priya'    -> chat bubble, right
+     'doctor'   -> centered italic text (never a bubble)
+     'narrator' -> centered italic text (never a bubble)
+     'citation' -> centered citation card (never a bubble)
+   ======================================================================== */
+const SCENES = [
+  { // 1 --------------------------------------------------------------
+    title: "Doctor Visit",
+    messages: [
+      { type:"narrator", text:"Rahul has had swollen, painful joints for a few months. Today he's finally at City Medical Center to find out why." },
+      { type:"doctor", text:"Dr. Patel examines Rahul's joints and reviews his recent bloodwork." },
+      { type:"doctor", text:"Dr. Patel — Rahul, your symptoms and labs point to Rheumatoid Arthritis, an autoimmune condition where your immune system attacks your joints. I'd like to start you on Humira (adalimumab)." },
+      { type:"rahul", text:"Is that going to be expensive? Will my insurance actually cover it?" },
+      { type:"doctor", text:"Dr. Patel — Humira is a specialty biologic, so most insurance plans require something called Prior Authorization before they'll pay for it. My office will handle that request for you." }
+    ],
+    choices: [
+      {
+        label: "🙋 Ask Dr. Patel: What exactly is Prior Authorization?",
+        ask: "What exactly is Prior Authorization?",
+        responses: [
+          { type:"doctor", text:"Dr. Patel — Think of it as your insurance company double-checking that a treatment is medically necessary before agreeing to pay for it. It happens before you start the medication, not after." }
+        ]
+      },
+      {
+        label: "😌 Say: Okay, let's get started.",
+        ask: "Okay, let's get started — I trust you, Dr. Patel.",
+        responses: [
+          { type:"doctor", text:"Dr. Patel — Great. My office will submit the request today." }
+        ]
+      }
+    ]
+  },
+  { // 2 --------------------------------------------------------------
+    title: "Insurance Roadblock",
+    messages: [
+      { type:"narrator", text:"Dr. Patel's office prepares a Prior Authorization request and sends it directly to Rahul's insurer, StarCare Health (illustrative example)." },
+      { type:"narrator", text:"Flow: Provider → PA Request → Payer. The pharmacy isn't part of this step — Humira here is billed under Rahul's medical benefit, so the request goes straight from the clinic to the insurer." },
+      { type:"rahul", text:"Wait — my pharmacy has nothing to do with this part?" },
+      { type:"priya", text:"Hi Rahul, I'm Priya — a healthcare operations specialist. I help patients make sense of moments exactly like this one." },
+      { type:"priya", text:"For medical-benefit drugs like Humira, the PA request travels Provider → Payer directly. Your pharmacy only enters the picture later, when it's time to actually fill or administer the medication." }
+    ],
+    choices: [
+      {
+        label: "🤔 Ask Priya: Why does medical vs. pharmacy benefit matter?",
+        ask: "Why does it matter whether it's a medical benefit or a pharmacy benefit?",
+        responses: [
+          { type:"priya", text:"Good question. Medical-benefit drugs (often given in a clinic, like infusions or injections) are billed through your medical plan. Pharmacy-benefit drugs are billed when you pick them up at a retail pharmacy. Each pathway has its own PA process — mixing the two up is a common source of delay." }
+        ]
+      },
+      {
+        label: "📌 Ask Priya: What happens once this PA is approved?",
+        ask: "What happens once this PA is approved?",
+        responses: [
+          { type:"priya", text:"Great forward-thinking question! Once StarCare Health approves a PA, it's typically saved on file — Rahul won't need to repeat the entire process every time he refills Humira, as long as his treatment and coverage stay the same. We'll come back to that at the end of the story." }
+        ]
+      }
+    ]
+  },
+  { // 3 --------------------------------------------------------------
+    title: "What is PA?",
+    messages: [
+      { type:"priya", text:"Let's slow down for a second. Prior Authorization, or \"PA,\" is your insurance company asking: before we agree to pay for this, can you show us it's medically necessary and the right fit for this diagnosis?" },
+      { type:"priya", text:"It's not just red tape, even though it can feel that way. For an aggressive, fast-progressing diagnosis like Rahul's Rheumatoid Arthritis, delays in starting treatment can let the disease do more damage before it's brought under control." },
+      { type:"priya", text:"That's why step therapy — being asked to try one medication before \"stepping up\" to another — isn't just bureaucracy. Used well, it manages cost and safety. Used without urgency, it can cost precious time." },
+      { type:"citation", text:"AMA 2023 Prior Authorization Physician Survey: Prior authorization causes treatment delays in the majority of cases." }
+    ],
+    choices: [
+      {
+        label: "❓ Ask Priya: What exactly is step therapy?",
+        ask: "What exactly is step therapy?",
+        responses: [
+          { type:"priya", text:"Step therapy means trying a lower-cost or more established treatment first, and only \"stepping up\" to a newer or more expensive one — like Humira — if that first option doesn't work well enough. Insurers use it to manage cost and confirm nothing simpler will do the job." }
+        ]
+      },
+      {
+        label: "⏱️ Ask Priya: How long does a PA decision usually take?",
+        ask: "How long does a PA decision usually take?",
+        responses: [
+          { type:"priya", text:"It varies by payer and urgency. Standard requests often take several business days to a couple of weeks; urgent requests can move faster, sometimes within 24–72 hours. That's part of why complete documentation up front matters so much." }
+        ]
+      }
+    ]
+  },
+  { // 4 --------------------------------------------------------------
+    title: "Insurance Review",
+    messages: [
+      { type:"priya", text:"Let's look at what StarCare Health (illustrative example) actually checks when a PA request like Rahul's lands on their desk." },
+      { type:"priya", text:"1️⃣ Eligibility — is Rahul actively enrolled in this plan, and is this benefit active today? If coverage has lapsed, nothing else matters yet." },
+      { type:"priya", text:"2️⃣ Clinical documentation — does the chart show the exam findings, labs, and reasoning that support this diagnosis and treatment choice?" },
+      { type:"priya", text:"3️⃣ ICD-10 diagnosis match — does the diagnosis code on the request actually match what Humira is approved to treat? Mismatches are a common, avoidable reason for denial." },
+      { type:"priya", text:"4️⃣ Step therapy history — has Rahul already tried (and failed, or been unable to tolerate) a required first-line treatment, and is that documented?" },
+      { type:"priya", text:"Each check confirms the same thing from a different angle: is this the right treatment, for the right diagnosis, at the right time, for this specific patient?" }
+    ],
+    choices: [
+      {
+        label: "🧾 Ask Priya: What happens if something's missing?",
+        ask: "What happens if something on this list is missing?",
+        responses: [
+          { type:"priya", text:"If even one piece is missing or unclear, StarCare Health can't approve the request as-is — that's usually when a pend or a denial happens, asking for more information rather than an outright \"no.\"" }
+        ]
+      },
+      {
+        label: "🤝 Ask Priya: How can Rahul help this go faster?",
+        ask: "How can Rahul help this go faster?",
+        responses: [
+          { type:"priya", text:"Honestly, most of this depends on the provider's documentation, not Rahul directly — but he can help by promptly sharing his treatment history, keeping his insurance details current, and following up with the office if he hasn't heard anything in a while." }
+        ]
+      }
+    ]
+  },
+  { // 5 --------------------------------------------------------------
+    title: "Denial",
+    messages: [
+      { type:"narrator", text:"Two weeks later, a letter arrives from StarCare Health." },
+      { type:"narrator", text:"📄 Determination: Prior Authorization DENIED — reason: missing step therapy documentation." },
+      { type:"rahul", text:"Denied?! Does that mean I can't get the medication at all now?" },
+      { type:"priya", text:"Take a breath, Rahul — a denial isn't the end of the road. It almost always means something specific is missing or unclear, not that the answer is a permanent \"no.\"" },
+      { type:"priya", text:"In this case, StarCare Health didn't see documentation that Rahul had tried — or couldn't tolerate — a first-line treatment before Humira. That's fixable." },
+      { type:"priya", text:"On the system side, this is exactly the kind of denial that adds up: resolving a PA denial like this one typically costs physician offices 2+ staff hours — tracking down records, refiling, following up. It's a real burden on clinic teams, not just patients." }
+    ],
+    choices: [
+      {
+        label: "📚 Ask Priya: What counts as step therapy documentation?",
+        ask: "What counts as \"step therapy documentation\"?",
+        responses: [
+          { type:"priya", text:"It's proof — usually pharmacy records or chart notes — showing Rahul tried a required first-line medication (often methotrexate, for Rheumatoid Arthritis) and it didn't work well enough, or he couldn't tolerate it." }
+        ]
+      },
+      {
+        label: "➡️ Ask Priya: What do we do now?",
+        ask: "What do we do now?",
+        responses: [
+          { type:"priya", text:"Now, Dr. Patel's office gathers the missing documentation and files a formal appeal. Let's walk through that together." }
+        ]
+      }
+    ]
+  },
+  { // 6 --------------------------------------------------------------
+    title: "Appeal",
+    messages: [
+      { type:"narrator", text:"Dr. Patel's office gets to work building a stronger case." },
+      { type:"priya", text:"Step one — gather documentation: Rahul's prior treatment history, including the methotrexate trial and why it didn't work." },
+      { type:"priya", text:"Step two — write a Letter of Medical Necessity: a clinical letter from Dr. Patel explaining Rahul's diagnosis, why Humira specifically is appropriate, and why waiting or trying something else isn't in his best interest." },
+      { type:"priya", text:"Step three — file the formal appeal with StarCare Health, attaching both the letter and the supporting records." },
+      { type:"narrator", text:"The appeal is submitted and enters review." }
+    ],
+    choices: [
+      {
+        label: "📝 Ask Priya: What goes inside a Letter of Medical Necessity?",
+        ask: "What goes inside a Letter of Medical Necessity?",
+        responses: [
+          { type:"priya", text:"Typically: the diagnosis and how it was confirmed, prior treatments tried and their outcomes, why the requested treatment is clinically appropriate, and what could happen if treatment is delayed or denied." }
+        ]
+      },
+      {
+        label: "⏳ Ask Priya: How long does an appeal usually take?",
+        ask: "How long does an appeal usually take?",
+        responses: [
+          { type:"priya", text:"It depends on the payer and the type of appeal, but formal appeals often take one to several weeks. Some plans offer an expedited appeal for urgent clinical situations." }
+        ]
+      }
+    ]
+  },
+  { // 7 --------------------------------------------------------------
+    title: "Approval",
+    messages: [
+      { type:"narrator", text:"A few weeks later, another letter arrives — this time with different news." },
+      { type:"narrator", text:"✅ Determination: Prior Authorization APPROVED. Reference #SC-PA-48213 (illustrative example)." },
+      { type:"rahul", text:"It's approved?! That's such a relief." },
+      { type:"priya", text:"Congratulations, Rahul! This approval is saved on file with StarCare Health, so you won't need to repeat the entire Prior Authorization process every time you refill Humira, as long as your treatment and coverage don't change." },
+      { type:"priya", text:"That reference number is worth holding onto — it's proof of this approval if any questions come up later." }
+    ],
+    choices: [
+      {
+        label: "📁 Ask Priya: What does \"saved on file\" mean long-term?",
+        ask: "What does \"saved on file\" actually mean long-term?",
+        responses: [
+          { type:"priya", text:"It means StarCare Health's system keeps a record that this specific treatment was reviewed and approved. Pharmacies and clinics can reference it, so future refills usually process smoothly without a brand-new PA." }
+        ]
+      },
+      {
+        label: "🔄 Ask Priya: What if Rahul switches insurance someday?",
+        ask: "What if Rahul switches insurance plans someday?",
+        responses: [
+          { type:"priya", text:"Good instinct. A new insurance company won't automatically have this approval on file — Rahul would likely need to go through Prior Authorization again with the new payer, even though he's already established on this medication." }
+        ]
+      }
+    ]
+  }
+];
+
+/* Scene 8 ("Takeaways") is rendered separately below — it's a summary,
+   not another round of dialogue + choices. */
+const TAKEAWAYS = {
+  title: "Takeaways",
+  patient: [
+    "A diagnosis can come with an unexpected extra step: Prior Authorization.",
+    "A denial isn't final — most are about missing information, not a permanent \"no.\"",
+    "An appeal, backed by clear documentation like a Letter of Medical Necessity, can turn a denial into an approval.",
+    "Once approved, a PA is often saved on file — but that can reset if you switch insurance."
+  ],
+  system: [
+    "Health systems and payers track denial rate (% of PA requests denied), appeal rate (% of denials appealed), and resolution time (how long it takes to reach a final answer).",
+    "Reducing avoidable denials — like missing step-therapy documentation — saves clinic staff hours and speeds up patient access to treatment.",
+    "PA-related delays are common enough that many health systems invest in operations specialists, like Priya, to help both patients and providers navigate the process."
+  ]
+};
+
+/* ========================================================================
+   2. STATE
+   ======================================================================== */
+const state = {
+  sceneIndex: 0 // 0-based index into SCENES; SCENES.length == takeaways
+};
+
+/* ========================================================================
+   3. DOM REFERENCES
+   ======================================================================== */
+const chatFeed = document.getElementById("chatFeed");
+const choiceArea = document.getElementById("choiceArea");
+const progressTracker = document.getElementById("progressTracker");
+
+/* ========================================================================
+   4. SMALL DOM HELPERS (createElement + appendChild only — no innerHTML
+      is ever set on chatFeed)
+   ======================================================================== */
+function clearChildren(el){
+  while(el.firstChild){ el.removeChild(el.firstChild); }
+}
+
+function scrollFeedToBottom(){
+  chatFeed.scrollTop = chatFeed.scrollHeight;
+}
+
+/* Chat bubble for Rahul (left) or Priya (right) */
+function appendBubble(who, text){
+  const row = document.createElement("div");
+  row.className = "flex items-end gap-2 msg-in " + (who === "rahul" ? "justify-start" : "justify-end");
+
+  const avatar = document.createElement("div");
+  avatar.className = "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-lg " +
+    (who === "rahul" ? "bg-[#e4eef8] order-1" : "bg-[#0b1e3a] order-2");
+  avatar.textContent = who === "rahul" ? "👦" : "👧";
+
+  const bubble = document.createElement("div");
+  bubble.className = "max-w-[75%] sm:max-w-[68%] px-4 py-2.5 text-sm sm:text-[15px] leading-relaxed shadow " +
+    (who === "rahul"
+      ? "bg-white border border-[#c6d8ea] text-black rounded-2xl rounded-bl-sm order-2"
+      : "bg-[#2563a8] text-white rounded-2xl rounded-br-sm order-1");
+
+  const name = document.createElement("div");
+  name.className = "font-data text-[10px] uppercase tracking-wider mb-1 " +
+    (who === "rahul" ? "text-blue-600" : "text-blue-100");
+  name.textContent = who === "rahul" ? "Rahul" : "Priya · Healthcare Ops Specialist";
+
+  const body = document.createElement("div");
+  body.textContent = text;
+
+  bubble.appendChild(name);
+  bubble.appendChild(body);
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  chatFeed.appendChild(row);
+  scrollFeedToBottom();
+}
+
+/* Centered italic text for narrator or doctor lines — never a bubble */
+function appendCentered(kind, text){
+  const wrap = document.createElement("div");
+  wrap.className = "msg-in flex justify-center px-2";
+
+  const p = document.createElement("p");
+  p.className = "italic text-center text-[13px] sm:text-sm max-w-lg leading-relaxed " +
+    (kind === "doctor" ? "text-[#0b1e3a]" : "text-[#5b6b7a]");
+  p.textContent = text;
+
+  wrap.appendChild(p);
+  chatFeed.appendChild(wrap);
+  scrollFeedToBottom();
+}
+
+/* Centered citation / source card */
+function appendCitation(text){
+  const wrap = document.createElement("div");
+  wrap.className = "msg-in flex justify-center px-2 my-1";
+
+  const card = document.createElement("div");
+  card.className = "max-w-md border-l-4 border-[#3b82c4] bg-[#eef4fb] rounded-r-lg px-4 py-3";
+
+  const label = document.createElement("div");
+  label.className = "font-data text-[10px] uppercase tracking-widest text-blue-700 mb-1";
+  label.textContent = "📊 Source";
+
+  const body = document.createElement("div");
+  body.className = "font-data text-[12px] text-[#0a0f16] leading-relaxed";
+  body.textContent = text;
+
+  card.appendChild(label);
+  card.appendChild(body);
+  wrap.appendChild(card);
+  chatFeed.appendChild(wrap);
+  scrollFeedToBottom();
+}
+
+/* Small centered scene-divider pill */
+function appendSceneDivider(index, title){
+  const wrap = document.createElement("div");
+  wrap.className = "msg-in flex justify-center my-2";
+
+  const pill = document.createElement("div");
+  pill.className = "font-data text-[10px] uppercase tracking-[.15em] text-blue-700 bg-[#e4eef8] border border-[#c6d8ea] rounded-full px-4 py-1.5";
+  pill.textContent = "Scene " + (index + 1) + " · " + title;
+
+  wrap.appendChild(pill);
+  chatFeed.appendChild(wrap);
+  scrollFeedToBottom();
+}
+
+/* Dispatch a single message object to the right renderer */
+function appendMessage(msg){
+  if(msg.type === "rahul" || msg.type === "priya"){
+    appendBubble(msg.type, msg.text);
+  } else if(msg.type === "doctor" || msg.type === "narrator"){
+    appendCentered(msg.type, msg.text);
+  } else if(msg.type === "citation"){
+    appendCitation(msg.text);
+  }
+}
+
+/* Play a list of messages one at a time with a short delay so the feed
+   reads like a real conversation unfolding, then run a callback. */
+function playMessages(messages, onDone){
+  let i = 0;
+  function next(){
+    if(i >= messages.length){ onDone && onDone(); return; }
+    appendMessage(messages[i]);
+    i++;
+    setTimeout(next, 550);
+  }
+  next();
+}
+
+/* ========================================================================
+   5. PROGRESS TRACKER
+   ======================================================================== */
+const TRACKER_LABELS = SCENES.map(s => s.title).concat([TAKEAWAYS.title]);
+
+function renderTracker(){
+  clearChildren(progressTracker);
+  TRACKER_LABELS.forEach((label, i)=>{
+    const step = document.createElement("div");
+    step.className = "tstep flex flex-col items-center";
+    if(i < state.sceneIndex) step.classList.add("done");
+
+    const num = document.createElement("div");
+    num.className = "w-7 h-7 rounded-full flex items-center justify-center font-data text-xs font-bold relative z-10 " +
+      (i < state.sceneIndex
+        ? "bg-[#3b82c4] border-2 border-[#63a3d6] text-white"
+        : i === state.sceneIndex
+          ? "bg-white border-2 border-white text-[#0b1e3a]"
+          : "bg-[#0b1e3a] border-2 border-[#1d4f8f] text-blue-300");
+    num.textContent = (i+1);
+
+    const lbl = document.createElement("div");
+    lbl.className = "text-[10px] text-center mt-1 leading-tight " +
+      (i === state.sceneIndex ? "text-white font-semibold" : "text-blue-300");
+    lbl.textContent = label;
+
+    step.appendChild(num);
+    step.appendChild(lbl);
+    progressTracker.appendChild(step);
+  });
+}
+
+/* ========================================================================
+   6. CHOICE RENDERING
+   ======================================================================== */
+function renderChoices(choices){
+  clearChildren(choiceArea);
+
+  choices.forEach(choice=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "flex-1 text-left text-sm font-medium bg-white border border-[#3b82c4] text-[#0b1e3a] rounded-xl px-4 py-3 hover:bg-[#e4eef8] transition shadow-sm";
+    btn.textContent = choice.label;
+    btn.addEventListener("click", ()=> handleChoice(choice));
+    choiceArea.appendChild(btn);
+  });
+}
+
+function renderContinue(label, onClick){
+  clearChildren(choiceArea);
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "mx-auto sm:mx-0 font-semibold text-sm bg-[#2563a8] hover:bg-[#1d4f8f] text-white rounded-xl px-6 py-3 shadow transition glow-pulse";
+  btn.textContent = label;
+  btn.addEventListener("click", onClick);
+  choiceArea.appendChild(btn);
+}
+
+function handleChoice(choice){
+  // Disable further clicks immediately by clearing the choice buttons.
+  clearChildren(choiceArea);
+
+  const followUp = [{ type:"rahul", text: choice.ask }].concat(choice.responses);
+  playMessages(followUp, ()=>{
+    const isLastStorytelling = state.sceneIndex === SCENES.length - 1;
+    renderContinue(
+      isLastStorytelling ? "See the Takeaways →" : "Continue the story →",
+      ()=> advanceScene()
+    );
+  });
+}
+
+/* ========================================================================
+   7. SCENE FLOW
+   ======================================================================== */
+function loadScene(index){
+  state.sceneIndex = index;
+  renderTracker();
+  const scene = SCENES[index];
+  appendSceneDivider(index, scene.title);
+  clearChildren(choiceArea);
+  playMessages(scene.messages, ()=> renderChoices(scene.choices));
+}
+
+function advanceScene(){
+  const next = state.sceneIndex + 1;
+  if(next < SCENES.length){
+    loadScene(next);
+  } else {
+    state.sceneIndex = SCENES.length; // takeaways slot
+    renderTracker();
+    renderTakeaways();
+  }
+}
+
+/* ========================================================================
+   8. TAKEAWAYS (scene 8) — two perspective cards, not chat bubbles
+   ======================================================================== */
+function buildPerspectiveCard(icon, heading, items, accentClasses){
+  const card = document.createElement("div");
+  card.className = "flex-1 rounded-xl border p-4 " + accentClasses;
+
+  const head = document.createElement("div");
+  head.className = "font-head font-bold text-base mb-2 flex items-center gap-2 text-[#0b1e3a]";
+  const iconSpan = document.createElement("span");
+  iconSpan.textContent = icon;
+  const headText = document.createElement("span");
+  headText.textContent = heading;
+  head.appendChild(iconSpan);
+  head.appendChild(headText);
+
+  const list = document.createElement("ul");
+  list.className = "list-disc list-inside space-y-2 text-sm text-[#1c2733] leading-relaxed";
+  items.forEach(text=>{
+    const li = document.createElement("li");
+    li.textContent = text;
+    list.appendChild(li);
+  });
+
+  card.appendChild(head);
+  card.appendChild(list);
+  return card;
+}
+
+function renderTakeaways(){
+  appendSceneDivider(SCENES.length, TAKEAWAYS.title);
+  appendCentered("narrator", "The story is over — but here's what it means, from two different seats at the table.");
+
+  const wrap = document.createElement("div");
+  wrap.className = "msg-in flex flex-col sm:flex-row gap-4 mt-1";
+
+  const patientCard = buildPerspectiveCard("👦", "Patient Perspective — Rahul", TAKEAWAYS.patient, "bg-[#eef4fb] border-[#9cc4e6]");
+  const systemCard = buildPerspectiveCard("🏥", "System Perspective — Health Ops", TAKEAWAYS.system, "bg-[#e9f0f7] border-[#7fa9c9]");
+
+  wrap.appendChild(patientCard);
+  wrap.appendChild(systemCard);
+  chatFeed.appendChild(wrap);
+  scrollFeedToBottom();
+
+  setTimeout(()=>{
+    appendCentered("narrator", "🎬 End of story.");
+    renderRestart();
+  }, 500);
+}
+
+function renderRestart(){
+  clearChildren(choiceArea);
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "mx-auto font-semibold text-sm bg-white border-2 border-[#2563a8] text-[#0b1e3a] hover:bg-[#e4eef8] rounded-xl px-6 py-3 shadow transition";
+  btn.textContent = "↺ Restart the Story";
+  btn.addEventListener("click", restart);
+  choiceArea.appendChild(btn);
+}
+
+/* ========================================================================
+   9. RESTART
+   ======================================================================== */
+function restart(){
+  clearChildren(chatFeed);
+  clearChildren(choiceArea);
+  state.sceneIndex = 0;
+  loadScene(0);
+}
+
+/* ========================================================================
+   10. INIT
+   ======================================================================== */
+renderTracker();
+loadScene(0);
+</script>
+</body>
+</html>
