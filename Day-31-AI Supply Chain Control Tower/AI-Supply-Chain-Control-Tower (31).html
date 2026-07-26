@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Supply Chain Control Tower</title>
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   Palette: void #060a14, panel #0d1424, panel-2 #121b30,
+   line #1e2c4a, cyan #29e0ff, blue #3b7cff, red #ff3b5c,
+   green #2ee6a6, orange #ffab2e, text #cddcf0, dim #6c81a8
+   Type: display = condensed uppercase system sans w/ wide tracking
+         body/data = ui-monospace (radar / telemetry feel)
+   Signature: radar-sweep ring behind the header title + scanning
+   horizon line across KPI bar
+   ============================================================ */
+:root{
+  --void:#060a14;
+  --panel:#0d1424;
+  --panel2:#121b30;
+  --panel3:#182644;
+  --line:#1e2c4a;
+  --cyan:#29e0ff;
+  --cyan-dim:#0f8fae;
+  --blue:#3b7cff;
+  --red:#ff3b5c;
+  --green:#2ee6a6;
+  --orange:#ffab2e;
+  --text:#cddcf0;
+  --dim:#6c81a8;
+  --dimmer:#465577;
+  --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(41,224,255,0.08), transparent 45%),
+    radial-gradient(ellipse at 100% 0%, rgba(59,124,255,0.10), transparent 40%),
+    var(--void);
+  color:var(--text);
+  font-family:var(--font-mono);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+}
+
+/* ---------- scanline texture ---------- */
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background:repeating-linear-gradient(180deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+  pointer-events:none;
+  z-index:999;
+}
+
+.app{ max-width:1400px; margin:0 auto; padding:18px 20px 60px; position:relative; }
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+header.top{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; margin-bottom:18px; flex-wrap:wrap;
+  position:relative;
+}
+.brand{ display:flex; align-items:center; gap:14px; }
+.radar{
+  width:46px; height:46px; border-radius:50%;
+  border:1px solid var(--line);
+  position:relative; overflow:hidden;
+  background:radial-gradient(circle at center, rgba(41,224,255,0.15), transparent 70%);
+  flex-shrink:0;
+}
+.radar::after{
+  content:"";
+  position:absolute; inset:0;
+  background:conic-gradient(from 0deg, rgba(41,224,255,0.9), transparent 35%, transparent 100%);
+  animation:spin 3s linear infinite;
+  border-radius:50%;
+}
+.radar::before{
+  content:"";
+  position:absolute; left:50%; top:50%; width:4px; height:4px; margin:-2px;
+  border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan);
+  z-index:2;
+}
+@keyframes spin{ to{ transform:rotate(360deg);} }
+.brand h1{
+  font-family:var(--font-display);
+  font-size:19px; letter-spacing:3px; text-transform:uppercase;
+  font-weight:700; color:#eef4ff;
+}
+.brand .tag{
+  font-size:10.5px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; margin-top:3px;
+}
+.top-controls{ display:flex; align-items:center; gap:8px; }
+.icon-btn{
+  background:var(--panel2); border:1px solid var(--line); color:var(--text);
+  width:38px; height:38px; border-radius:8px; cursor:pointer;
+  font-size:15px; display:flex; align-items:center; justify-content:center;
+  transition:border-color .15s, transform .1s, background .15s;
+}
+.icon-btn:hover{ border-color:var(--cyan-dim); background:var(--panel3); }
+.icon-btn:active{ transform:scale(0.94); }
+.icon-btn.active{ color:var(--cyan); border-color:var(--cyan); box-shadow:0 0 10px rgba(41,224,255,0.25) inset; }
+
+.timer-wrap{
+  display:flex; align-items:center; gap:10px;
+  background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+  padding:8px 16px;
+}
+.timer-wrap .lbl{ font-size:10px; letter-spacing:2px; color:var(--dim); text-transform:uppercase; }
+.timer-wrap .val{ font-family:var(--font-mono); font-size:22px; font-weight:700; color:var(--cyan); letter-spacing:1px; }
+.timer-wrap .val.low{ color:var(--red); animation:blinktext 0.8s infinite; }
+@keyframes blinktext{ 50%{ opacity:0.35; } }
+
+/* ============================================================
+   KPI BAR
+   ============================================================ */
+.kpi-bar{
+  display:grid; grid-template-columns:repeat(8, 1fr);
+  gap:10px; margin-bottom:20px;
+}
+@media (max-width:1100px){ .kpi-bar{ grid-template-columns:repeat(4, 1fr);} }
+@media (max-width:600px){ .kpi-bar{ grid-template-columns:repeat(2, 1fr);} }
+.kpi{
+  background:linear-gradient(180deg, var(--panel2), var(--panel));
+  border:1px solid var(--line); border-radius:10px;
+  padding:11px 12px; position:relative; overflow:hidden;
+  transition:box-shadow .2s, border-color .2s;
+}
+.kpi::before{
+  content:""; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:var(--kpi-color, var(--cyan));
+}
+.kpi .k-label{
+  font-size:9px; letter-spacing:1.4px; text-transform:uppercase; color:var(--dim); margin-bottom:6px; white-space:nowrap;
+}
+.kpi .k-value{
+  font-size:20px; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums;
+}
+.kpi .k-bar{
+  height:3px; background:var(--line); border-radius:2px; margin-top:8px; overflow:hidden;
+}
+.kpi .k-fill{
+  height:100%; width:50%; background:var(--kpi-color, var(--cyan));
+  transition:width .5s ease, background .3s ease;
+  box-shadow:0 0 6px var(--kpi-color, var(--cyan));
+}
+.kpi.pulse-up{ animation:pulseGood .5s ease; }
+.kpi.pulse-down{ animation:pulseBad .5s ease; }
+@keyframes pulseGood{ 0%{ box-shadow:0 0 0 0 rgba(46,230,166,0.5);} 100%{ box-shadow:0 0 0 10px rgba(46,230,166,0);} }
+@keyframes pulseBad{ 0%{ box-shadow:0 0 0 0 rgba(255,59,92,0.5);} 100%{ box-shadow:0 0 0 10px rgba(255,59,92,0);} }
+
+/* ============================================================
+   MAIN GRID
+   ============================================================ */
+.main-grid{
+  display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start;
+}
+@media (max-width:960px){ .main-grid{ grid-template-columns:1fr; } }
+
+.panel-heading{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:10px;
+}
+.panel-heading h2{
+  font-family:var(--font-display); font-size:12px; letter-spacing:2.5px; text-transform:uppercase;
+  color:var(--dim); font-weight:600;
+}
+.panel-heading .count{
+  font-size:11px; color:var(--cyan); border:1px solid var(--cyan-dim); border-radius:20px;
+  padding:2px 10px; letter-spacing:1px;
+}
+
+/* ---------- alert cards ---------- */
+.alerts-feed{ display:flex; flex-direction:column; gap:12px; min-height:200px; }
+.alert-card{
+  background:linear-gradient(160deg, var(--panel2) 0%, var(--panel) 100%);
+  border:1px solid var(--line); border-radius:12px; padding:16px 18px;
+  position:relative; overflow:hidden;
+  animation:slideIn .35s ease;
+}
+@keyframes slideIn{ from{ opacity:0; transform:translateY(-10px);} to{ opacity:1; transform:translateY(0);} }
+.alert-card.high{ border-color:rgba(255,59,92,0.4); box-shadow:0 0 24px -8px rgba(255,59,92,0.35); }
+.alert-card.medium{ border-color:rgba(255,171,46,0.35); box-shadow:0 0 20px -10px rgba(255,171,46,0.25); }
+.alert-card.low{ border-color:rgba(41,224,255,0.25); }
+.alert-card.critical-pulse{ animation:slideIn .35s ease, cardPulse 1.4s ease-in-out infinite; }
+@keyframes cardPulse{
+  0%,100%{ box-shadow:0 0 18px -6px rgba(255,59,92,0.35); }
+  50%{ box-shadow:0 0 30px 2px rgba(255,59,92,0.55); }
+}
+.alert-card.resolving{ animation:cardOut .4s ease forwards; }
+@keyframes cardOut{ to{ opacity:0; transform:translateX(30px) scale(0.97); } }
+
+.a-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.a-title-wrap{ display:flex; align-items:center; gap:9px; }
+.a-icon{ font-size:19px; line-height:1; }
+.a-title{ font-family:var(--font-display); font-size:14.5px; font-weight:700; letter-spacing:0.4px; color:#eef4ff; }
+.a-priority{
+  font-size:9px; letter-spacing:1.4px; text-transform:uppercase; font-weight:700;
+  padding:3px 9px; border-radius:20px; white-space:nowrap;
+}
+.a-priority.high{ background:rgba(255,59,92,0.15); color:var(--red); border:1px solid rgba(255,59,92,0.4); }
+.a-priority.medium{ background:rgba(255,171,46,0.15); color:var(--orange); border:1px solid rgba(255,171,46,0.4); }
+.a-priority.low{ background:rgba(41,224,255,0.12); color:var(--cyan); border:1px solid rgba(41,224,255,0.35); }
+
+.a-desc{ font-size:12.5px; color:var(--dim); line-height:1.5; margin-bottom:8px; }
+.a-impact{
+  font-size:11px; color:var(--text); background:var(--panel3); border:1px solid var(--line);
+  border-radius:6px; padding:6px 10px; margin-bottom:12px; line-height:1.4;
+}
+.a-impact b{ color:var(--orange); }
+
+.a-timer{ height:4px; background:var(--line); border-radius:3px; overflow:hidden; margin-bottom:12px; }
+.a-timer-fill{ height:100%; background:var(--cyan); transition:width 0.2s linear, background .3s; }
+
+.a-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+.act-btn{
+  background:var(--panel3); border:1px solid var(--line); color:var(--text);
+  font-family:var(--font-mono); font-size:11.5px; padding:8px 12px; border-radius:7px; cursor:pointer;
+  transition:border-color .15s, background .15s, transform .1s;
+}
+.act-btn:hover{ border-color:var(--cyan); background:#1a2b4d; transform:translateY(-1px); }
+.act-btn:active{ transform:translateY(0) scale(0.97); }
+.act-btn.danger{ color:var(--red); }
+.act-btn.neutral{ color:var(--dim); }
+
+/* ---------- outcome toast on card ---------- */
+.a-result{
+  margin-top:10px; font-size:11.5px; padding:8px 10px; border-radius:6px; line-height:1.4;
+  animation:fadeIn .25s ease;
+}
+.a-result.best{ background:rgba(46,230,166,0.1); color:var(--green); border:1px solid rgba(46,230,166,0.3); }
+.a-result.good{ background:rgba(41,224,255,0.1); color:var(--cyan); border:1px solid rgba(41,224,255,0.3); }
+.a-result.poor{ background:rgba(255,171,46,0.1); color:var(--orange); border:1px solid rgba(255,171,46,0.3); }
+.a-result.bad{ background:rgba(255,59,92,0.1); color:var(--red); border:1px solid rgba(255,59,92,0.3); }
+@keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+
+.empty-state{
+  text-align:center; padding:50px 20px; color:var(--dimmer); font-size:12.5px;
+  border:1px dashed var(--line); border-radius:12px;
+}
+
+/* ---------- event log ---------- */
+.log-panel{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:14px; max-height:640px; overflow-y:auto;
+}
+.log-panel::-webkit-scrollbar{ width:6px; }
+.log-panel::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+.log-entry{
+  font-size:11px; line-height:1.5; padding:8px 0; border-bottom:1px solid var(--line);
+  display:flex; gap:8px;
+  animation:fadeIn .3s ease;
+}
+.log-entry:last-child{ border-bottom:none; }
+.log-time{ color:var(--dimmer); flex-shrink:0; }
+.log-msg{ color:var(--text); }
+.log-msg.good{ color:var(--green); }
+.log-msg.bad{ color:var(--red); }
+.log-msg.neutral{ color:var(--dim); }
+
+/* ============================================================
+   START / END OVERLAYS
+   ============================================================ */
+.overlay{
+  position:fixed; inset:0; background:rgba(4,7,14,0.88); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; z-index:200; padding:20px;
+}
+.overlay.hidden{ display:none; }
+.modal{
+  background:linear-gradient(165deg, var(--panel2), var(--panel));
+  border:1px solid var(--line); border-radius:16px; padding:38px 34px;
+  max-width:560px; width:100%; text-align:center;
+  box-shadow:0 0 60px -10px rgba(41,224,255,0.15);
+  max-height:88vh; overflow-y:auto;
+}
+.modal h2{
+  font-family:var(--font-display); font-size:24px; letter-spacing:1px; color:#eef4ff; margin-bottom:10px;
+}
+.modal p.lead{ color:var(--dim); font-size:13px; line-height:1.6; margin-bottom:22px; }
+.modal .grade{
+  font-size:64px; font-weight:800; font-family:var(--font-display);
+  margin:10px 0 4px; letter-spacing:1px;
+}
+.modal .grade-label{ font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--dim); margin-bottom:20px;}
+.end-kpis{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; text-align:left; }
+.end-kpi{ background:var(--panel3); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+.end-kpi .l{ font-size:9px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+.end-kpi .v{ font-size:16px; font-weight:700; color:var(--text); }
+.summary-box{
+  text-align:left; background:var(--panel3); border:1px solid var(--line); border-radius:10px;
+  padding:14px 16px; font-size:12.5px; line-height:1.6; color:var(--text); margin-bottom:22px;
+}
+.btn-primary{
+  background:linear-gradient(135deg, var(--cyan), var(--blue)); border:none; color:#031018;
+  font-family:var(--font-display); font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+  font-size:13px; padding:14px 30px; border-radius:9px; cursor:pointer;
+  transition:transform .12s, box-shadow .2s; box-shadow:0 6px 20px -6px rgba(41,224,255,0.5);
+}
+.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 10px 26px -6px rgba(41,224,255,0.65); }
+.btn-primary:active{ transform:translateY(0); }
+.btn-secondary{
+  background:transparent; border:1px solid var(--line); color:var(--text);
+  font-family:var(--font-mono); font-size:12px; padding:10px 20px; border-radius:8px; cursor:pointer; margin-top:10px;
+}
+.btn-secondary:hover{ border-color:var(--cyan-dim); }
+
+.role-badge{
+  display:inline-block; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cyan);
+  border:1px solid var(--cyan-dim); border-radius:20px; padding:5px 14px; margin-bottom:18px;
+}
+.brief-list{ text-align:left; font-size:12px; color:var(--dim); line-height:1.9; margin:0 0 24px 0; list-style:none; }
+.brief-list li{ display:flex; gap:10px; align-items:flex-start; }
+.brief-list .dot{ color:var(--cyan); }
+
+/* ---------- pause overlay ---------- */
+#pauseOverlay .modal{ max-width:340px; }
+
+/* help modal */
+#helpOverlay .modal{ text-align:left; }
+#helpOverlay h2{ text-align:center; }
+.help-section{ margin-bottom:16px; }
+.help-section h3{ font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--cyan); margin-bottom:6px; }
+.help-section p, .help-section li{ font-size:12px; color:var(--dim); line-height:1.7; }
+.help-section ul{ padding-left:18px; }
+
+footer.credit{
+  text-align:center; margin-top:26px; font-size:10.5px; color:var(--dimmer); letter-spacing:1px;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ================= HEADER ================= -->
+  <header class="top">
+    <div class="brand">
+      <div class="radar"></div>
+      <div>
+        <h1>Supply Chain Control Tower</h1>
+        <div class="tag">Global Operations &middot; Live Command View</div>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <div class="timer-wrap">
+        <span class="lbl">Time Left</span>
+        <span class="val" id="timerVal">3:00</span>
+      </div>
+      <button class="icon-btn active" id="soundBtn" title="Toggle sound">🔊</button>
+      <button class="icon-btn" id="pauseBtn" title="Pause">⏸</button>
+      <button class="icon-btn" id="helpBtn" title="Instructions">❔</button>
+    </div>
+  </header>
+
+  <!-- ================= KPI BAR ================= -->
+  <div class="kpi-bar" id="kpiBar"><!-- injected by JS --></div>
+
+  <!-- ================= MAIN GRID ================= -->
+  <div class="main-grid">
+    <div>
+      <div class="panel-heading">
+        <h2>Active Alerts</h2>
+        <span class="count" id="alertCount">0 open</span>
+      </div>
+      <div class="alerts-feed" id="alertsFeed">
+        <div class="empty-state" id="emptyState">Scanning network for disruptions…</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-heading">
+        <h2>Event Log</h2>
+      </div>
+      <div class="log-panel" id="logPanel"></div>
+    </div>
+  </div>
+
+  <footer class="credit">AI SUPPLY CHAIN CONTROL TOWER &middot; SIMULATION &middot; NO REAL DATA IS TRANSMITTED</footer>
+</div>
+
+<!-- ================= START OVERLAY ================= -->
+<div class="overlay" id="startOverlay">
+  <div class="modal">
+    <span class="role-badge">Role: Head of Operations</span>
+    <h2>Your Network Is Under Pressure</h2>
+    <p class="lead">Ports are backing up, suppliers are slipping, and demand won't wait. You have <strong>3 minutes</strong> to keep the network alive — every call you make moves the numbers.</p>
+    <ul class="brief-list">
+      <li><span class="dot">▸</span> Alerts will stream in and stack up as time runs out.</li>
+      <li><span class="dot">▸</span> Choose the right action fast — the clock on each alert is real.</li>
+      <li><span class="dot">▸</span> Ignoring or stalling has consequences, some of them delayed.</li>
+      <li><span class="dot">▸</span> Protect Service Level, Customer Satisfaction, Inventory Health and Transportation Efficiency, while keeping Cost down and Revenue Protected up.</li>
+    </ul>
+    <button class="btn-primary" id="startBtn">Take Command</button>
+  </div>
+</div>
+
+<!-- ================= END OVERLAY ================= -->
+<div class="overlay hidden" id="endOverlay">
+  <div class="modal">
+    <h2>Shift Complete</h2>
+    <div class="grade" id="finalGrade">A</div>
+    <div class="grade-label">Performance Grade</div>
+    <div class="end-kpis" id="endKpis"></div>
+    <div class="summary-box" id="summaryText"></div>
+    <button class="btn-primary" id="playAgainBtn">Play Again</button>
+  </div>
+</div>
+
+<!-- ================= PAUSE OVERLAY ================= -->
+<div class="overlay hidden" id="pauseOverlay">
+  <div class="modal">
+    <h2>Paused</h2>
+    <p class="lead">The network doesn't wait, but you can. Resume when ready.</p>
+    <button class="btn-primary" id="resumeBtn">Resume Operations</button>
+  </div>
+</div>
+
+<!-- ================= HELP OVERLAY ================= -->
+<div class="overlay hidden" id="helpOverlay">
+  <div class="modal">
+    <h2>How This Works</h2>
+    <div class="help-section">
+      <h3>Objective</h3>
+      <p>Run the global network for 3 minutes. Resolve incoming alerts with the action that best fits the problem to protect your KPIs and maximize your score.</p>
+    </div>
+    <div class="help-section">
+      <h3>KPIs</h3>
+      <p>Service Level, Customer Satisfaction, Inventory Health and Transportation Efficiency should stay high. Operating Cost should stay low. Revenue Protected and Score should climb.</p>
+    </div>
+    <div class="help-section">
+      <h3>Actions</h3>
+      <ul>
+        <li><strong>Best-fit actions</strong> resolve the alert cleanly and boost KPIs.</li>
+        <li><strong>Partial-fit actions</strong> help some, but cost more or leave risk behind.</li>
+        <li><strong>Ignore</strong> almost always hurts you — the problem happens anyway.</li>
+        <li><strong>Delay Decision</strong> buys a few seconds but the consequence often lands later, and worse.</li>
+      </ul>
+    </div>
+    <div class="help-section">
+      <h3>Difficulty</h3>
+      <p>Alerts arrive faster and stack up more as the clock runs down. Prioritize the high-priority (red) alerts first.</p>
+    </div>
+    <button class="btn-primary" id="closeHelpBtn">Got It</button>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   AI SUPPLY CHAIN CONTROL TOWER — GAME ENGINE
+   Vanilla JS, modular functions, single file.
+   ========================================================================== */
+(function(){
+  'use strict';
+
+  /* -------------------------------------------------------------
+     0. STATIC DATA
+  ------------------------------------------------------------- */
+  var GAME_LENGTH = 180; // seconds
+  var ACTIONS = ["Expedite Shipment","Use Backup Supplier","Reroute Trucks","Increase Production","Transfer Inventory","Approve Air Freight","Ignore","Delay Decision"];
+
+  var ALERT_TYPES = [
+    {
+      id:"port", icon:"🚢", title:"Port Congestion",
+      desc:"Container vessels are queued outside the terminal; unloading is running days behind schedule.",
+      impact:"Inbound stock for 3 SKU groups will miss their delivery window.",
+      correct:["Reroute Trucks","Approve Air Freight"], good:["Expedite Shipment"]
+    },
+    {
+      id:"supplier", icon:"🏭", title:"Supplier Delay",
+      desc:"A tier-1 supplier has confirmed a production slip on a critical component.",
+      impact:"Assembly line output could drop 18% next cycle.",
+      correct:["Use Backup Supplier"], good:["Expedite Shipment","Increase Production"]
+    },
+    {
+      id:"truck", icon:"🚛", title:"Truck Breakdown",
+      desc:"A regional carrier reports a mechanical failure mid-route on a high-value load.",
+      impact:"Last-mile delivery to 40 retail sites is at risk today.",
+      correct:["Reroute Trucks"], good:["Expedite Shipment"]
+    },
+    {
+      id:"warehouse", icon:"📦", title:"Warehouse Running Out of Stock",
+      desc:"Fulfillment center inventory for a top-selling SKU has dropped below safety stock.",
+      impact:"Stockout expected within hours without intervention.",
+      correct:["Transfer Inventory"], good:["Increase Production","Expedite Shipment"]
+    },
+    {
+      id:"customs", icon:"🛂", title:"Customs Inspection",
+      desc:"A shipment has been flagged for random customs inspection at the border.",
+      impact:"Clearance could take 48+ hours if not escalated.",
+      correct:["Expedite Shipment"], good:["Approve Air Freight"]
+    },
+    {
+      id:"demand", icon:"📈", title:"Demand Spike",
+      desc:"Regional sell-through has surged well above forecast overnight.",
+      impact:"Current supply plan covers only 60% of new projected demand.",
+      correct:["Increase Production"], good:["Transfer Inventory","Approve Air Freight"]
+    },
+    {
+      id:"machine", icon:"⚙️", title:"Factory Machine Failure",
+      desc:"A key production line has gone down with an unplanned mechanical fault.",
+      impact:"Output on this line is halted until resolved.",
+      correct:["Use Backup Supplier"], good:["Transfer Inventory"]
+    },
+    {
+      id:"weather", icon:"🌪️", title:"Weather Disruption",
+      desc:"Severe weather has closed a major freight corridor used by your fleet.",
+      impact:"Regional deliveries could be delayed 2-3 days.",
+      correct:["Reroute Trucks"], good:["Approve Air Freight"]
+    },
+    {
+      id:"count", icon:"🧾", title:"Wrong Inventory Count",
+      desc:"A cycle count has revealed a system-vs-physical stock mismatch at a distribution center.",
+      impact:"Order promising accuracy is compromised for affected SKUs.",
+      correct:["Transfer Inventory"], good:["Increase Production"]
+    },
+    {
+      id:"damaged", icon:"⚠️", title:"Damaged Shipment",
+      desc:"An inbound container has arrived with visible damage to a portion of the load.",
+      impact:"A customer order is now short on quantity promised.",
+      correct:["Expedite Shipment"], good:["Use Backup Supplier"]
+    }
+  ];
+
+  var PRIORITIES = ["low","medium","high"]; // weight index 0,1,2
+
+  /* -------------------------------------------------------------
+     1. STATE
+  ------------------------------------------------------------- */
+  var state = null;
+
+  function freshState(){
+    return {
+      running:false,
+      paused:false,
+      timeLeft:GAME_LENGTH,
+      elapsed:0,
+      kpi:{
+        service:85, csat:85, inventory:80, transport:82,
+        cost:40, // lower is better
+        revenue:0, // climbs, no ceiling really but we cap display
+        score:0
+      },
+      activeAlerts:[],
+      resolvedCount:0,
+      correctCount:0,
+      wrongCount:0,
+      alertSeq:0,
+      spawnTimerId:null,
+      tickTimerId:null,
+      soundOn:true
+    };
+  }
+
+  var KPI_META = [
+    {key:"service", label:"Service Level", suffix:"%", color:"var(--cyan)"},
+    {key:"csat", label:"Cust. Satisfaction", suffix:"%", color:"var(--blue)"},
+    {key:"inventory", label:"Inventory Health", suffix:"%", color:"var(--green)"},
+    {key:"transport", label:"Transport Efficiency", suffix:"%", color:"var(--cyan)"},
+    {key:"cost", label:"Operating Cost", suffix:"%", color:"var(--orange)"},
+    {key:"revenue", label:"Revenue Protected", suffix:"k", color:"var(--green)"},
+    {key:"score", label:"Score", suffix:"", color:"var(--blue)"},
+    {key:"time", label:"Remaining Time", suffix:"", color:"var(--red)"}
+  ];
+
+  /* -------------------------------------------------------------
+     2. DOM REFS
+  ------------------------------------------------------------- */
+  var $ = function(id){ return document.getElementById(id); };
+  var kpiBar = $("kpiBar"), alertsFeed = $("alertsFeed"), emptyState = $("emptyState"),
+      logPanel = $("logPanel"), alertCount = $("alertCount"), timerVal = $("timerVal");
+
+  /* -------------------------------------------------------------
+     3. RENDER: KPI BAR
+  ------------------------------------------------------------- */
+  function renderKpiBar(){
+    kpiBar.innerHTML = KPI_META.map(function(m){
+      return '<div class="kpi" id="kpi-'+m.key+'" style="--kpi-color:'+m.color+'">'+
+        '<div class="k-label">'+m.label+'</div>'+
+        '<div class="k-value" id="kpiv-'+m.key+'">--</div>'+
+        '<div class="k-bar"><div class="k-fill" id="kpif-'+m.key+'"></div></div>'+
+      '</div>';
+    }).join("");
+  }
+
+  function updateKpiDisplay(changedKeys){
+    KPI_META.forEach(function(m){
+      var valEl = $("kpiv-"+m.key);
+      var fillEl = $("kpif-"+m.key);
+      var card = $("kpi-"+m.key);
+      var raw, pct, display;
+      if(m.key === "time"){
+        raw = state.timeLeft;
+        display = formatTime(raw);
+        pct = Math.max(0, Math.min(100, (raw / GAME_LENGTH) * 100));
+      } else if(m.key === "revenue"){
+        raw = state.kpi.revenue;
+        display = "$"+Math.max(0,Math.round(raw))+"k";
+        pct = Math.max(0, Math.min(100, (raw/500)*100));
+      } else if(m.key === "score"){
+        raw = state.kpi.score;
+        display = Math.round(raw);
+        pct = Math.max(0, Math.min(100, (raw/2000)*100));
+      } else if(m.key === "cost"){
+        raw = clamp(state.kpi.cost,0,100);
+        display = Math.round(raw)+"%";
+        pct = raw;
+      } else {
+        raw = clamp(state.kpi[m.key],0,100);
+        display = Math.round(raw)+"%";
+        pct = raw;
+      }
+      if(valEl) valEl.textContent = display;
+      if(fillEl) fillEl.style.width = pct+"%";
+      if(m.key === "time" && raw <= 20){ timerVal.classList.add("low"); } 
+      if(card && changedKeys && changedKeys.indexOf(m.key) > -1){
+        card.classList.remove("pulse-up","pulse-down");
+        void card.offsetWidth;
+        var delta = changedKeys[m.key];
+        card.classList.add(delta >= 0 ? "pulse-up" : "pulse-down");
+      }
+    });
+    timerVal.textContent = formatTime(state.timeLeft);
+    if(state.timeLeft <= 20) timerVal.classList.add("low"); else timerVal.classList.remove("low");
+  }
+
+  function formatTime(sec){
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec/60), s = sec%60;
+    return m+":"+(s<10?"0":"")+s;
+  }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  /* -------------------------------------------------------------
+     4. KPI MUTATION
+  ------------------------------------------------------------- */
+  function applyDeltas(deltas){
+    // deltas: {service, csat, inventory, transport, cost, revenue, score}
+    var changed = {};
+    Object.keys(deltas).forEach(function(k){
+      if(k === "score"){
+        state.kpi.score = Math.max(0, state.kpi.score + deltas[k]);
+        changed.score = deltas[k];
+      } else if(k === "revenue"){
+        state.kpi.revenue = Math.max(0, state.kpi.revenue + deltas[k]);
+        changed.revenue = deltas[k];
+      } else if(k === "cost"){
+        state.kpi.cost = clamp(state.kpi.cost + deltas[k], 0, 100);
+        changed.cost = -deltas[k]; // lower cost delta is "good" visually -> invert for pulse color logic
+      } else {
+        state.kpi[k] = clamp(state.kpi[k] + deltas[k], 0, 100);
+        changed[k] = deltas[k];
+      }
+    });
+    updateKpiDisplay(changed);
+  }
+
+  /* -------------------------------------------------------------
+     5. LOGGING
+  ------------------------------------------------------------- */
+  function log(msg, cls){
+    var entry = document.createElement("div");
+    entry.className = "log-entry";
+    entry.innerHTML = '<span class="log-time">'+formatTime(state.timeLeft)+'</span><span class="log-msg '+(cls||"")+'">'+msg+'</span>';
+    logPanel.insertBefore(entry, logPanel.firstChild);
+  }
+
+  /* -------------------------------------------------------------
+     6. ALERT GENERATION
+  ------------------------------------------------------------- */
+  function pickPriority(){
+    // as time progresses (elapsed increases), skew toward higher priority
+    var progress = state.elapsed / GAME_LENGTH; // 0..1
+    var r = Math.random();
+    var highChance = 0.2 + progress*0.35;
+    var lowChance = Math.max(0.15, 0.4 - progress*0.3);
+    if(r < highChance) return "high";
+    if(r < highChance + lowChance) return "low";
+    return "medium";
+  }
+
+  function spawnAlert(){
+    if(!state.running || state.paused) return;
+    if(state.activeAlerts.length >= 6) return; // cap simultaneous alerts
+
+    var type = ALERT_TYPES[Math.floor(Math.random()*ALERT_TYPES.length)];
+    var priority = pickPriority();
+    var severity = priority === "high" ? 3 : priority === "medium" ? 2 : 1;
+    var duration = priority === "high" ? 18 : priority === "medium" ? 24 : 30;
+
+    var alert = {
+      uid: "a"+(state.alertSeq++),
+      type:type, priority:priority, severity:severity,
+      duration:duration, timeLeft:duration,
+      resolved:false
+    };
+    state.activeAlerts.push(alert);
+    renderAlertsFeed();
+    log('New alert: <strong>'+type.title+'</strong> ('+priority+' priority)', priority === "high" ? "bad" : "neutral");
+  }
+
+  function scheduleNextSpawn(){
+    if(!state.running) return;
+    var progress = state.elapsed / GAME_LENGTH;
+    // interval shrinks from ~6.5s to ~2.2s as time passes
+    var interval = 6500 - progress*4300 + Math.random()*1500;
+    interval = Math.max(1800, interval);
+    state.spawnTimerId = setTimeout(function(){
+      spawnAlert();
+      scheduleNextSpawn();
+    }, interval);
+  }
+
+  /* -------------------------------------------------------------
+     7. RESOLUTION LOGIC
+  ------------------------------------------------------------- */
+  function classify(alert, action){
+    if(alert.type.correct.indexOf(action) > -1) return "best";
+    if(alert.type.good.indexOf(action) > -1) return "good";
+    if(action === "Ignore") return "ignore";
+    if(action === "Delay Decision") return "delay";
+    return "poor";
+  }
+
+  function outcomeDeltas(alert, outcome){
+    var s = alert.severity; // 1,2,3
+    var d = {service:0,csat:0,inventory:0,transport:0,cost:0,revenue:0,score:0};
+    if(outcome === "best"){
+      d.service = 3*s; d.csat = 2.5*s; d.inventory = 2*s; d.transport = 2*s;
+      d.cost = 1*s; // small cost increase for taking action
+      d.revenue = 12*s; d.score = 60*s;
+    } else if(outcome === "good"){
+      d.service = 1.5*s; d.csat = 1*s; d.inventory = 1*s; d.transport = 1*s;
+      d.cost = 3*s; d.revenue = 6*s; d.score = 30*s;
+    } else if(outcome === "poor"){
+      d.service = -1*s; d.csat = -1*s; d.inventory = -0.5*s; d.transport = -0.5*s;
+      d.cost = 5*s; d.revenue = 1*s; d.score = 8*s;
+    } else if(outcome === "ignore"){
+      d.service = -3*s; d.csat = -3.5*s; d.inventory = -1.5*s; d.transport = -1*s;
+      d.cost = 4*s; d.revenue = -8*s; d.score = -35*s;
+    } else if(outcome === "delay"){
+      d.service = -0.5*s; d.csat = -0.5*s; d.cost = 1*s; d.score = -5*s;
+      // delayed extra penalty
+      scheduleDelayedConsequence(alert, s);
+    } else if(outcome === "expired"){
+      d.service = -3.5*s; d.csat = -3*s; d.inventory = -1.5*s; d.transport = -1.5*s;
+      d.cost = 4*s; d.revenue = -10*s; d.score = -40*s;
+    }
+    return d;
+  }
+
+  function scheduleDelayedConsequence(alert, s){
+    setTimeout(function(){
+      if(!state.running || state.paused) return;
+      var d = {service:-1.5*s, csat:-1.5*s, inventory:-0.5*s, cost:3*s, revenue:-4*s, score:-15*s};
+      applyDeltas(d);
+      log('Delayed fallout from <strong>'+alert.type.title+'</strong>: the deferred problem resurfaced worse.', "bad");
+    }, 6000 + Math.random()*2500);
+  }
+
+  function outcomeText(alert, action, outcome){
+    var map = {
+      best:"Sharp call. "+action+" resolved the "+alert.type.title.toLowerCase()+" cleanly.",
+      good:action+" helped, but cost more than the ideal response would have.",
+      poor:action+" wasn't the right fit here — the issue lingers and costs mount.",
+      ignore:"Ignoring "+alert.type.title.toLowerCase()+" let the problem run its course.",
+      delay:"Delayed. Expect this one to come back — possibly worse.",
+      expired:alert.type.title+" went unresolved and hit the network."
+    };
+    return map[outcome] || "Handled.";
+  }
+
+  function resolveAlert(alert, action){
+    if(alert.resolved) return;
+    alert.resolved = true;
+    var outcome = classify(alert, action);
+    var deltas = outcomeDeltas(alert, outcome);
+    applyDeltas(deltas);
+
+    state.resolvedCount++;
+    if(outcome === "best" || outcome === "good") state.correctCount++;
+    else if(outcome === "poor" || outcome === "ignore" || outcome === "expired") state.wrongCount++;
+
+    var logCls = (outcome === "best" || outcome === "good") ? "good" : (outcome === "delay" ? "neutral" : "bad");
+    log(outcomeText(alert, action, outcome), logCls);
+
+    // remove from active list with animation
+    var cardEl = document.getElementById("card-"+alert.uid);
+    if(cardEl){
+      var resultDiv = document.createElement("div");
+      resultDiv.className = "a-result "+outcome;
+      resultDiv.textContent = outcomeText(alert, action, outcome);
+      cardEl.querySelector(".a-actions").style.display = "none";
+      cardEl.appendChild(resultDiv);
+      setTimeout(function(){
+        cardEl.classList.add("resolving");
+        setTimeout(function(){
+          state.activeAlerts = state.activeAlerts.filter(function(a){ return a.uid !== alert.uid; });
+          renderAlertsFeed();
+        }, 380);
+      }, 550);
+    } else {
+      state.activeAlerts = state.activeAlerts.filter(function(a){ return a.uid !== alert.uid; });
+    }
+  }
+
+  function expireAlert(alert){
+    if(alert.resolved) return;
+    alert.resolved = true;
+    var deltas = outcomeDeltas(alert, "expired");
+    applyDeltas(deltas);
+    state.resolvedCount++; state.wrongCount++;
+    log(outcomeText(alert, null, "expired"), "bad");
+    state.activeAlerts = state.activeAlerts.filter(function(a){ return a.uid !== alert.uid; });
+    renderAlertsFeed();
+  }
+
+  /* -------------------------------------------------------------
+     8. RENDER: ALERTS FEED
+  ------------------------------------------------------------- */
+  function actionBtnClass(action){
+    if(action === "Ignore") return "act-btn danger";
+    if(action === "Delay Decision") return "act-btn neutral";
+    return "act-btn";
+  }
+
+  function renderAlertsFeed(){
+    alertCount.textContent = state.activeAlerts.length + " open";
+    if(state.activeAlerts.length === 0){
+      alertsFeed.innerHTML = "";
+      alertsFeed.appendChild(emptyState);
+      emptyState.style.display = "block";
+      return;
+    }
+    emptyState.style.display = "none";
+
+    // sort high priority first
+    var sorted = state.activeAlerts.slice().sort(function(a,b){ return b.severity - a.severity; });
+
+    alertsFeed.innerHTML = sorted.map(function(alert){
+      var pct = Math.max(0, (alert.timeLeft/alert.duration)*100);
+      var barColor = pct < 30 ? "var(--red)" : pct < 60 ? "var(--orange)" : "var(--cyan)";
+      var pulseCls = (alert.priority === "high") ? " critical-pulse" : "";
+      var actionsHtml = ACTIONS.map(function(act){
+        return '<button class="'+actionBtnClass(act)+'" data-uid="'+alert.uid+'" data-action="'+act+'">'+act+'</button>';
+      }).join("");
+      return (
+        '<div class="alert-card '+alert.priority+pulseCls+'" id="card-'+alert.uid+'">'+
+          '<div class="a-top">'+
+            '<div class="a-title-wrap"><span class="a-icon">'+alert.type.icon+'</span><span class="a-title">'+alert.type.title+'</span></div>'+
+            '<span class="a-priority '+alert.priority+'">'+alert.priority+'</span>'+
+          '</div>'+
+          '<div class="a-desc">'+alert.type.desc+'</div>'+
+          '<div class="a-impact"><b>Impact:</b> '+alert.type.impact+'</div>'+
+          '<div class="a-timer"><div class="a-timer-fill" id="timerfill-'+alert.uid+'" style="width:'+pct+'%; background:'+barColor+'"></div></div>'+
+          '<div class="a-actions">'+actionsHtml+'</div>'+
+        '</div>'
+      );
+    }).join("");
+
+    // attach listeners
+    alertsFeed.querySelectorAll(".act-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var uid = btn.getAttribute("data-uid");
+        var action = btn.getAttribute("data-action");
+        var alert = state.activeAlerts.find(function(a){ return a.uid === uid; });
+        if(alert) resolveAlert(alert, action);
+      });
+    });
+  }
+
+  /* -------------------------------------------------------------
+     9. MAIN TICK LOOP
+  ------------------------------------------------------------- */
+  function tick(){
+    if(!state.running || state.paused) return;
+    state.timeLeft -= 0.2;
+    state.elapsed += 0.2;
+
+    // update alert countdowns
+    state.activeAlerts.forEach(function(alert){
+      if(alert.resolved) return;
+      alert.timeLeft -= 0.2;
+      var fill = document.getElementById("timerfill-"+alert.uid);
+      if(fill){
+        var pct = Math.max(0, (alert.timeLeft/alert.duration)*100);
+        var barColor = pct < 30 ? "var(--red)" : pct < 60 ? "var(--orange)" : "var(--cyan)";
+        fill.style.width = pct+"%";
+        fill.style.background = barColor;
+      }
+      if(alert.timeLeft <= 0){
+        expireAlert(alert);
+      }
+    });
+
+    updateKpiDisplay();
+
+    if(state.timeLeft <= 0){
+      endGame();
+      return;
+    }
+    state.tickTimerId = setTimeout(tick, 200);
+  }
+
+  /* -------------------------------------------------------------
+     10. START / END / PAUSE
+  ------------------------------------------------------------- */
+  function startGame(){
+    state = freshState();
+    logPanel.innerHTML = "";
+    renderKpiBar();
+    updateKpiDisplay();
+    renderAlertsFeed();
+    $("startOverlay").classList.add("hidden");
+    $("endOverlay").classList.add("hidden");
+    state.running = true;
+    log("Control tower online. Monitoring global network…", "neutral");
+    // first alert appears quickly
+    setTimeout(spawnAlert, 900);
+    scheduleNextSpawn();
+    state.tickTimerId = setTimeout(tick, 200);
+  }
+
+  function endGame(){
+    state.running = false;
+    clearTimeout(state.spawnTimerId);
+    clearTimeout(state.tickTimerId);
+
+    var k = state.kpi;
+    var overall = (k.service + k.csat + k.inventory + k.transport + (100-k.cost)) / 5;
+    var grade, gradeColor;
+    if(overall >= 85 && k.score >= 900){ grade="A+"; gradeColor="var(--green)"; }
+    else if(overall >= 75){ grade="A"; gradeColor="var(--green)"; }
+    else if(overall >= 62){ grade="B"; gradeColor="var(--cyan)"; }
+    else if(overall >= 48){ grade="C"; gradeColor="var(--orange)"; }
+    else { grade="D"; gradeColor="var(--red)"; }
+
+    $("finalGrade").textContent = grade;
+    $("finalGrade").style.color = gradeColor;
+
+    var endKpiData = [
+      {l:"Final Score", v:Math.round(k.score)},
+      {l:"Service Level", v:Math.round(k.service)+"%"},
+      {l:"Customer Satisfaction", v:Math.round(k.csat)+"%"},
+      {l:"Inventory Health", v:Math.round(k.inventory)+"%"},
+      {l:"Transportation Efficiency", v:Math.round(k.transport)+"%"},
+      {l:"Operating Cost", v:Math.round(k.cost)+"%"},
+      {l:"Revenue Protected", v:"$"+Math.max(0,Math.round(k.revenue))+"k"},
+      {l:"Alerts Resolved", v:state.resolvedCount},
+      {l:"Correct Decisions", v:state.correctCount},
+      {l:"Wrong Decisions", v:state.wrongCount}
+    ];
+    $("endKpis").innerHTML = endKpiData.map(function(x){
+      return '<div class="end-kpi"><div class="l">'+x.l+'</div><div class="v">'+x.v+'</div></div>';
+    }).join("");
+
+    var summary;
+    if(grade === "A+" || grade === "A"){
+      summary = "Exceptional shift. You kept service levels high and costs under control while resolving the majority of disruptions with the right call. This is what a resilient, well-run network looks like under pressure.";
+    } else if(grade === "B"){
+      summary = "Solid performance. Most disruptions were handled well, though a few decisions cost more than they needed to. Tightening response time on high-priority alerts would lift this further.";
+    } else if(grade === "C"){
+      summary = "A mixed shift. The network stayed afloat, but too many issues were ignored or delayed, and operating costs crept up. Prioritizing red alerts first will protect service levels more effectively.";
+    } else {
+      summary = "A rough shift. Several disruptions went unresolved or were handled with the wrong response, and customer satisfaction took a hit. Focus on matching each alert to its best-fit action next time.";
+    }
+    $("summaryText").textContent = summary;
+
+    $("endOverlay").classList.remove("hidden");
+    log("Shift complete. Final score: "+Math.round(k.score), "neutral");
+  }
+
+  function togglePause(){
+    if(!state || !state.running) return;
+    state.paused = !state.paused;
+    if(state.paused){
+      $("pauseOverlay").classList.remove("hidden");
+      clearTimeout(state.tickTimerId);
+      clearTimeout(state.spawnTimerId);
+    } else {
+      $("pauseOverlay").classList.add("hidden");
+      state.tickTimerId = setTimeout(tick, 200);
+      scheduleNextSpawn();
+    }
+  }
+
+  /* -------------------------------------------------------------
+     11. EVENT WIRING
+  ------------------------------------------------------------- */
+  $("startBtn").addEventListener("click", startGame);
+  $("playAgainBtn").addEventListener("click", startGame);
+  $("pauseBtn").addEventListener("click", togglePause);
+  $("resumeBtn").addEventListener("click", togglePause);
+  $("helpBtn").addEventListener("click", function(){ $("helpOverlay").classList.remove("hidden"); });
+  $("closeHelpBtn").addEventListener("click", function(){ $("helpOverlay").classList.add("hidden"); });
+  $("soundBtn").addEventListener("click", function(){
+    var btn = $("soundBtn");
+    var on = btn.classList.toggle("active");
+    btn.textContent = on ? "🔊" : "🔇";
+    if(state) state.soundOn = on;
+  });
+
+  /* -------------------------------------------------------------
+     12. INITIAL RENDER (pre-game static KPI bar so it's not empty)
+  ------------------------------------------------------------- */
+  state = freshState();
+  renderKpiBar();
+  updateKpiDisplay();
+
+})();
+</script>
+</body>
+</html>
