@@ -1,21 +1,21 @@
-# Day 34 - Marketing Detective Simulator
+# Day 35 - Prompt Puzzle Simulator
 
 ## Overview
 
-For Day 34 of the AI Challenge, I developed an interactive **Marketing Detective Simulator** that helps users investigate marketing campaigns, identify strategic mistakes, and learn from real-world scenarios.
+For Day 35 of the AI Challenge, I developed an interactive **Prompt Puzzle Simulator** that helps users practice and improve prompt engineering skills through game-based challenges.
 
-The application provides marketing investigation cases where users analyze evidence, organize information, and make decisions to determine what went wrong in a campaign.
+The application guides users through different prompt scenarios where they analyze, improve, and evaluate prompts to understand how better instructions lead to better AI outputs.
 
 ## Features Implemented
 
-* Interactive marketing investigation scenarios
-* Marketing case selection
-* Evidence analysis using investigation board
-* Drag-and-drop evidence card organization
-* Primary marketing mistake identification
-* Expert explanation and final verdict
-* Marketing Learning Report
-* Multiple randomized case replays
+* Interactive onboarding experience
+* Three prompt engineering challenges
+* Domain-based prompt practice
+* Difficulty-based replay options
+* Prompt evaluation system
+* Prompt Performance Report
+* Learning-focused feedback
+* Interactive game-style experience
 
 ## Technologies Used
 
@@ -26,13 +26,12 @@ The application provides marketing investigation cases where users analyze evide
 
 ## Learning Outcomes
 
-* Learned how to analyze marketing campaign performance
-* Understood common marketing mistakes and their impact
-* Explored evidence-based decision-making
-* Improved skills in building interactive AI-powered applications
-* Learned how simulations can make business learning more engaging
-
+* Learned the importance of structured prompting
+* Understood how context and constraints improve AI responses
+* Practiced prompt optimization techniques
+* Explored gamification for AI learning
+* Improved understanding of human-AI interaction
 
 ## Conclusion
 
-This project demonstrated how AI-powered simulations can transform marketing education by allowing users to investigate problems, analyze evidence, and develop better strategic thinking skills.
+This project demonstrated how AI learning can be made interactive and engaging through simulations. It helped build a deeper understanding of prompt engineering principles and effective communication with AI systems.
