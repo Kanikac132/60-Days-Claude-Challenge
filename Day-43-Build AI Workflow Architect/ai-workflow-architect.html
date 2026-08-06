@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Workflow Architect — React Portfolio Build Pipeline</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --paper: #F3EEDF;
+  --paper-2: #EAE3CE;
+  --ink: #16324F;
+  --ink-soft: #3E5975;
+  --ink-faint: #6B84A0;
+  --line: rgba(22,50,79,0.14);
+  --line-strong: rgba(22,50,79,0.30);
+  --accent: #C4452F;
+  --accent-ink: #ffffff;
+  --good: #3F7D5C;
+  --card: #FBF9F1;
+  --shadow: 0 1px 0 rgba(22,50,79,0.06);
+  --radius: 3px;
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+}
+html[data-theme="dark"]{
+  --paper: #0B1F33;
+  --paper-2: #0F2740;
+  --ink: #CFE8F2;
+  --ink-soft: #93B9CC;
+  --ink-faint: #5F84994;
+  --ink-faint: #5F849A;
+  --line: rgba(127,212,232,0.14);
+  --line-strong: rgba(127,212,232,0.32);
+  --accent: #E8735A;
+  --accent-ink: #0B1F33;
+  --good: #6FCB9F;
+  --card: #0E2439;
+  --shadow: 0 1px 0 rgba(0,0,0,0.3);
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    repeating-linear-gradient(0deg, var(--line) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 40px),
+    var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.6;
+  transition:background-color .3s ease, color .3s ease;
+}
+h1,h2,h3,h4{font-family:var(--font-display); margin:0; letter-spacing:-0.01em;}
+p{margin:0;}
+button{font-family:var(--font-body); cursor:pointer;}
+::selection{background:var(--accent); color:var(--accent-ink);}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+
+.mono{font-family:var(--font-mono);}
+.section-label{
+  font-family:var(--font-mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-faint); margin:0 0 14px; display:flex; align-items:center; gap:10px;
+}
+.section-label::after{content:''; flex:1; height:1px; background:var(--line-strong);}
+.wrap{max-width:1180px; margin:0 auto; padding:0 28px;}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 28px; background:color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line-strong);
+}
+.brand{font-family:var(--font-display); font-weight:700; font-size:16px; display:flex; align-items:baseline; gap:10px;}
+.brand-sub{font-family:var(--font-mono); font-weight:400; font-size:11px; color:var(--ink-faint);}
+.controls{display:flex; align-items:center; gap:10px;}
+.icon-btn{
+  background:transparent; border:1px solid var(--line-strong); color:var(--ink);
+  width:34px; height:34px; border-radius:var(--radius); font-size:15px;
+  display:flex; align-items:center; justify-content:center; transition:all .15s ease;
+}
+.icon-btn:hover{border-color:var(--accent); color:var(--accent);}
+.progress-pill{
+  font-family:var(--font-mono); font-size:11px; border:1px solid var(--line-strong);
+  padding:8px 12px; border-radius:20px; display:flex; align-items:center; gap:8px;
+}
+.progress-track{width:60px; height:4px; background:var(--line); border-radius:2px; overflow:hidden;}
+.progress-fill{height:100%; background:var(--accent); width:0%; transition:width .4s ease;}
+
+/* ===== HERO ===== */
+.hero{position:relative; padding:64px 28px 40px; border-bottom:1px solid var(--line-strong);}
+.corner{position:absolute; width:22px; height:22px; opacity:.5;}
+.corner::before,.corner::after{content:''; position:absolute; background:var(--ink-faint);}
+.corner::before{width:100%; height:1px; top:50%;}
+.corner::after{height:100%; width:1px; left:50%;}
+.corner.tl{top:16px; left:16px;} .corner.tr{top:16px; right:16px;}
+.hero-inner{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:1fr 300px; gap:40px; align-items:end;}
+.eyebrow{font-family:var(--font-mono); font-size:12px; letter-spacing:.1em; color:var(--accent); margin-bottom:14px; text-transform:uppercase;}
+.hero h1{font-size:clamp(28px,4vw,46px); line-height:1.08; font-weight:700; max-width:640px;}
+.hero-desc{margin-top:16px; max-width:560px; color:var(--ink-soft); font-size:15.5px;}
+.hero-stats{display:flex; gap:28px; margin-top:26px; flex-wrap:wrap;}
+.stat b{display:block; font-family:var(--font-display); font-size:22px;}
+.stat span{font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em;}
+.title-block{
+  border:1px solid var(--line-strong); font-family:var(--font-mono); font-size:11px;
+}
+.title-block .tb-row{display:flex; justify-content:space-between; padding:8px 12px; border-bottom:1px solid var(--line);}
+.title-block .tb-row:last-child{border-bottom:none;}
+.title-block .tb-row span:first-child{color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em;}
+.title-block .tb-title{padding:10px 12px; font-family:var(--font-display); font-weight:700; font-size:13px; border-bottom:1px solid var(--line-strong); background:var(--card);}
+
+/* ===== PIPELINE DIAGRAM ===== */
+.diagram-section{padding:56px 0; border-bottom:1px solid var(--line-strong);}
+#pipelineSvg{width:100%; height:auto; display:block;}
+.pipe-node{cursor:pointer;}
+.pipe-node circle{transition:all .2s ease;}
+.pipe-node:hover circle{stroke:var(--accent);}
+.pipe-node text{font-family:var(--font-mono); pointer-events:none;}
+
+/* ===== DECISION HELPER ===== */
+.helper-section{padding:56px 0; border-bottom:1px solid var(--line-strong);}
+.helper-box{border:1px solid var(--line-strong); background:var(--card); border-radius:var(--radius); padding:26px;}
+.helper-q{font-family:var(--font-display); font-weight:600; font-size:17px; margin-bottom:16px;}
+.helper-opts{display:flex; flex-wrap:wrap; gap:10px;}
+.helper-opt{
+  border:1px solid var(--line-strong); background:transparent; color:var(--ink);
+  padding:9px 16px; border-radius:20px; font-size:13.5px; transition:all .15s ease;
+}
+.helper-opt:hover, .helper-opt.active{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+.helper-result{margin-top:20px; padding-top:20px; border-top:1px dashed var(--line-strong); display:none;}
+.helper-result.show{display:block;}
+.helper-result .tool-name{font-family:var(--font-display); font-weight:700; font-size:18px; color:var(--accent);}
+.helper-result p{margin-top:6px; color:var(--ink-soft);}
+
+/* ===== STAGES ===== */
+.stages-section{padding:56px 0;}
+.stage-card{
+  border:1px solid var(--line-strong); background:var(--card); border-radius:var(--radius);
+  margin-bottom:18px; overflow:hidden; scroll-margin-top:80px;
+}
+.stage-head{
+  display:flex; align-items:center; gap:16px; padding:18px 20px; cursor:pointer; user-select:none;
+}
+.stage-num{
+  font-family:var(--font-mono); font-size:12px; color:var(--accent); border:1px solid var(--line-strong);
+  width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.stage-titles{flex:1; min-width:0;}
+.stage-titles h3{font-size:18px; font-weight:600;}
+.stage-sub{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); margin-top:3px; text-transform:uppercase; letter-spacing:.03em;}
+.stage-meta{display:flex; align-items:center; gap:14px; flex-shrink:0;}
+.time-chip{font-family:var(--font-mono); font-size:11px; border:1px solid var(--line-strong); padding:5px 10px; border-radius:14px; color:var(--ink-soft); white-space:nowrap;}
+.star-btn{background:none; border:none; font-size:18px; color:var(--line-strong); transition:color .15s ease;}
+.star-btn.active{color:var(--accent);}
+.chevron{transition:transform .25s ease; color:var(--ink-faint); font-size:12px;}
+.stage-card.open .chevron{transform:rotate(180deg);}
+.stage-body{max-height:0; overflow:hidden; transition:max-height .35s ease;}
+.stage-card.open .stage-body{max-height:6000px;}
+.stage-body-inner{padding:0 20px 24px;}
+
+.tabs{display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:18px;}
+.tab-btn{
+  background:transparent; border:none; font-family:var(--font-mono); font-size:11.5px; text-transform:uppercase;
+  letter-spacing:.03em; padding:7px 11px; border-radius:14px; color:var(--ink-faint);
+}
+.tab-btn.active{background:var(--accent); color:var(--accent-ink);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+ul.plain{margin:0; padding:0; list-style:none;}
+ul.plain li{position:relative; padding-left:18px; margin-bottom:9px; color:var(--ink-soft); font-size:14px;}
+ul.plain li::before{content:'—'; position:absolute; left:0; color:var(--ink-faint);}
+
+.task-item{display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; font-size:14px;}
+.task-item input{margin-top:3px; accent-color:var(--accent);}
+.task-item label{cursor:pointer;}
+.task-item.checked label{color:var(--ink-faint); text-decoration:line-through;}
+
+.tool-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px;}
+.tool-card{border:1px solid var(--line); border-radius:var(--radius); padding:14px; background:var(--paper);}
+.tool-card h4{font-size:14.5px; font-weight:600; margin-bottom:6px;}
+.tool-card .tag{font-family:var(--font-mono); font-size:10px; color:var(--accent); text-transform:uppercase; letter-spacing:.04em;}
+.tool-card p{font-size:13px; color:var(--ink-soft); margin-top:6px;}
+.tool-card .alt{margin-top:8px; font-size:12px; color:var(--ink-faint); font-family:var(--font-mono);}
+
+.prompt-box{
+  background:var(--paper-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px 16px; font-family:var(--font-mono); font-size:12.5px; color:var(--ink); margin-bottom:12px;
+  position:relative; white-space:pre-wrap;
+}
+.copy-btn{
+  position:absolute; top:10px; right:10px; font-family:var(--font-mono); font-size:10px;
+  background:transparent; border:1px solid var(--line-strong); color:var(--ink-faint);
+  padding:4px 8px; border-radius:10px;
+}
+.copy-btn:hover{color:var(--accent); border-color:var(--accent);}
+
+.mistake-item{display:flex; gap:10px; margin-bottom:9px; font-size:14px; color:var(--ink-soft);}
+.mistake-item::before{content:'✕'; color:var(--accent); font-size:12px; margin-top:2px;}
+.output-chip{display:inline-block; font-family:var(--font-mono); font-size:11.5px; border:1px solid var(--line-strong); padding:6px 10px; border-radius:14px; margin:0 8px 8px 0; color:var(--ink-soft);}
+
+.notes-area{
+  width:100%; min-height:80px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+  color:var(--ink); font-family:var(--font-body); font-size:13.5px; padding:10px; resize:vertical;
+}
+.notes-label{font-family:var(--font-mono); font-size:11px; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px; display:block;}
+
+/* ===== COMPARISON ===== */
+.compare-section{padding:56px 0; border-top:1px solid var(--line-strong);}
+.compare-table{width:100%; border-collapse:collapse; font-size:13.5px;}
+.compare-table th, .compare-table td{border:1px solid var(--line); padding:12px 14px; text-align:left; vertical-align:top;}
+.compare-table th{font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-faint); background:var(--card);}
+.compare-table td:first-child{font-family:var(--font-display); font-weight:600;}
+.compare-table tr:hover td{background:var(--card);}
+
+/* ===== SUMMARY ===== */
+.summary-section{padding:56px 0; border-top:1px solid var(--line-strong);}
+.summary-grid{display:grid; grid-template-columns:1.3fr 1fr; gap:40px;}
+.summary-block{margin-bottom:36px;}
+.summary-block h3{font-size:16px; margin-bottom:14px; display:flex; align-items:center; gap:10px;}
+.summary-block h3::before{content:''; width:8px; height:8px; background:var(--accent); flex-shrink:0;}
+.stack-list{display:flex; flex-direction:column; gap:10px;}
+.stack-item{display:flex; justify-content:space-between; border:1px solid var(--line); border-radius:var(--radius); padding:10px 14px; background:var(--card); font-size:13.5px;}
+.stack-item span:last-child{font-family:var(--font-mono); font-size:11px; color:var(--ink-faint);}
+.link-list a{display:block; color:var(--ink); text-decoration:none; font-size:13.5px; padding:8px 0; border-bottom:1px solid var(--line);}
+.link-list a:hover{color:var(--accent);}
+.tag-cloud{display:flex; flex-wrap:wrap; gap:8px;}
+.tag-chip{font-family:var(--font-mono); font-size:11.5px; border:1px solid var(--line-strong); padding:6px 12px; border-radius:14px; color:var(--ink-soft);}
+.future-list li{margin-bottom:12px;}
+.future-list b{display:block; font-size:14px; margin-bottom:2px;}
+
+footer{padding:30px 28px 60px; text-align:center; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint);}
+.reset-link{background:none; border:none; color:var(--ink-faint); text-decoration:underline; font-family:var(--font-mono); font-size:11px; cursor:pointer;}
+
+@media (max-width:820px){
+  .hero-inner{grid-template-columns:1fr;}
+  .summary-grid{grid-template-columns:1fr;}
+  .stage-meta{flex-direction:column; align-items:flex-end; gap:6px;}
+  .stage-head{flex-wrap:wrap;}
+}
+@media print{
+  .topbar, .helper-section, .diagram-section, .icon-btn, .star-btn, .copy-btn{display:none !important;}
+  body{background:#fff !important;}
+  .stage-body{max-height:none !important;}
+  .stage-card{break-inside:avoid; border:1px solid #999;}
+  .tab-panel{display:block !important;}
+  .tabs{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">AI WORKFLOW ARCHITECT <span class="brand-sub mono">SHEET 001 / REV A</span></div>
+  <div class="controls">
+    <div class="progress-pill"><span>PROGRESS</span><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><span id="progressPct">0%</span></div>
+    <button class="icon-btn" id="printBtn" title="Print workflow guide">⎙</button>
+    <button class="icon-btn" id="themeToggle" title="Toggle dark mode">◐</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="corner tl"></div><div class="corner tr"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow">Software Development / Frontend / React</div>
+      <h1>Personal Portfolio Website — AI-Accelerated Build Pipeline</h1>
+      <p class="hero-desc">A complete, end-to-end blueprint for planning, designing, writing, building, testing, and launching a React developer portfolio — with the specific AI tools, prompts, and decisions mapped to every stage.</p>
+      <div class="hero-stats">
+        <div class="stat"><b>6</b><span>Stages</span></div>
+        <div class="stat"><b>27–52h</b><span>Est. Total Time</span></div>
+        <div class="stat"><b>18+</b><span>AI Tools Referenced</span></div>
+        <div class="stat"><b id="taskCountStat">—</b><span>Actionable Tasks</span></div>
+      </div>
+    </div>
+    <div class="title-block">
+      <div class="tb-title">Project Title Block</div>
+      <div class="tb-row"><span>Project</span><span>Dev Portfolio (React)</span></div>
+      <div class="tb-row"><span>Domain</span><span>Frontend / SWE</span></div>
+      <div class="tb-row"><span>Method</span><span>AI-Assisted</span></div>
+      <div class="tb-row"><span>Scale</span><span>1 : Solo Build</span></div>
+      <div class="tb-row"><span>Date</span><span id="tbDate">—</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="diagram-section wrap" id="diagram">
+  <h2 class="section-label">00 — Pipeline Overview (click a station)</h2>
+  <div id="svgHolder"></div>
+</section>
+
+<section class="helper-section wrap">
+  <h2 class="section-label">00.1 — Quick Tool Finder</h2>
+  <div class="helper-box">
+    <div class="helper-q">What do you need help with right now?</div>
+    <div class="helper-opts" id="helperOpts"></div>
+    <div class="helper-result" id="helperResult"></div>
+  </div>
+</section>
+
+<section class="stages-section wrap">
+  <h2 class="section-label">01–06 — Workflow Stages</h2>
+  <div id="stagesHolder"></div>
+</section>
+
+<section class="compare-section wrap">
+  <h2 class="section-label">07 — AI Tool Comparison</h2>
+  <div style="overflow-x:auto;"><table class="compare-table" id="compareTable"></table></div>
+</section>
+
+<section class="summary-section wrap">
+  <h2 class="section-label">08 — Summary &amp; Resources</h2>
+  <div class="summary-grid">
+    <div>
+      <div class="summary-block">
+        <h3>Workflow Summary</h3>
+        <p style="color:var(--ink-soft); font-size:14px;" id="workflowSummaryText"></p>
+      </div>
+      <div class="summary-block">
+        <h3>Additional AI Prompts</h3>
+        <div id="bonusPrompts"></div>
+      </div>
+      <div class="summary-block">
+        <h3>Future Automation Opportunities</h3>
+        <ul class="future-list plain" id="futureList" style="list-style:none; padding:0;"></ul>
+      </div>
+    </div>
+    <div>
+      <div class="summary-block">
+        <h3>Recommended AI Stack</h3>
+        <div class="stack-list" id="stackList"></div>
+      </div>
+      <div class="summary-block">
+        <h3>Learning Resources</h3>
+        <div class="link-list" id="resourceList"></div>
+      </div>
+      <div class="summary-block">
+        <h3>Communities</h3>
+        <div class="link-list" id="communityList"></div>
+      </div>
+      <div class="summary-block">
+        <h3>Search Keywords</h3>
+        <div class="tag-cloud" id="keywordCloud"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  AI WORKFLOW ARCHITECT — DRAWN FOR: REACT PORTFOLIO BUILD — YOUR PROGRESS IS SAVED LOCALLY IN THIS BROWSER —
+  <button class="reset-link" id="resetBtn">RESET ALL PROGRESS</button>
+</footer>
+
+<script>
+(function(){
+
+/* ============ DATA ============ */
+const STAGES = [
+{
+  id:'discovery', num:'01', title:'Discovery & Planning', sub:'Define audience, goals, sitemap', time:'2–4 hrs',
+  objectives:[
+    'Define the portfolio\'s single goal (land interviews, attract freelance clients, or both).',
+    'Identify the target audience (hiring managers, recruiters, potential clients).',
+    'Produce a sitemap and content inventory before any design or code exists.'
+  ],
+  tasks:[
+    'Audit 5–8 portfolios in your target niche for structure and tone',
+    'Write a 1-paragraph positioning statement (who you help, how, proof)',
+    'Draft a sitemap: Home, Projects, About, Resume, Contact',
+    'List the 3–6 projects you will feature, ranked by relevance',
+    'Define success metrics (interviews booked, contact form submits)'
+  ],
+  tools:[
+    {name:'Claude', tag:'Primary', why:'Holds long structured planning docs and follows detailed instructions without losing the thread — ideal for sitemap + content inventory in one pass.', alt:'Alt: Notion AI'},
+    {name:'ChatGPT (GPT-4o)', tag:'Brainstorming', why:'Fast at generating many rough ideas and competitor angles to react to.', alt:'Alt: Gemini'},
+    {name:'Perplexity', tag:'Research', why:'Cited, current research on portfolio trends and hiring expectations in your niche.', alt:'Alt: Google + AI Overviews'}
+  ],
+  prompts:[
+    'Act as a senior UX strategist. Analyze what makes frontend developer portfolios memorable to hiring managers. Give me 5 structural patterns I should consider, with trade-offs.',
+    'Create a sitemap and content inventory for a React portfolio targeting [target role]. For each page, list its purpose, key content blocks, and the one action I want the visitor to take.'
+  ],
+  practices:[
+    'Anchor every decision to the stated goal — cut anything that doesn\'t serve it',
+    'Keep the sitemap to 5–6 pages maximum for a personal portfolio',
+    'Write goals as measurable outcomes, not vague intentions'
+  ],
+  mistakes:[
+    'Skipping audience definition and designing for "everyone"',
+    'Copying a competitor\'s structure wholesale instead of adapting it',
+    'Scope creep — planning 12 pages when 5 would do the job'
+  ],
+  outputs:['Sitemap document','Content inventory sheet','1-page project brief','Ranked project shortlist']
+},
+{
+  id:'design', num:'02', title:'Design & Prototyping', sub:'Visual identity, wireframes, UI system', time:'4–8 hrs',
+  objectives:[
+    'Establish a visual identity: palette, type scale, spacing system.',
+    'Wireframe the core pages before investing in high-fidelity design.',
+    'Produce a component list that maps directly to future React components.'
+  ],
+  tasks:[
+    'Define 4–6 colors and a 2-typeface pairing',
+    'Wireframe Home and Projects pages (low-fidelity)',
+    'Generate 2–3 hero section directions and pick one',
+    'Build a hi-fi mockup of the Home page',
+    'List reusable components (Nav, Card, Button, Tag, Footer)'
+  ],
+  tools:[
+    {name:'v0.dev (Vercel)', tag:'Primary', why:'Generates real React + Tailwind components from a prompt, closing the gap between mockup and code — you can paste output straight into your app.', alt:'Alt: Framer AI'},
+    {name:'Uizard / Galileo AI', tag:'Exploration', why:'Fast visual exploration of layout directions before you commit to one.', alt:'Alt: Figma + AI plugins'},
+    {name:'Claude', tag:'Design Rationale', why:'Useful for writing UI copy for empty/loading/error states and explaining design trade-offs.', alt:'Alt: ChatGPT'}
+  ],
+  prompts:[
+    'Generate a minimalist hero section for a developer portfolio using React and Tailwind CSS: headline, one-line subheadline, two CTA buttons, dark-mode ready, no stock imagery.',
+    'Propose a 6-color palette and 2-typeface pairing for a confident, technical-but-approachable frontend developer portfolio. Give hex values and reasoning for each choice.'
+  ],
+  practices:[
+    'Design mobile-first, then scale up',
+    'Limit the palette to 4–6 colors used consistently',
+    'Check color contrast (WCAG AA) at the design stage, not after launch'
+  ],
+  mistakes:[
+    'Polishing visuals before content exists, forcing later rework',
+    'Ignoring responsive breakpoints until development',
+    'Inconsistent spacing values instead of a defined scale'
+  ],
+  outputs:['Design tokens (color/type/spacing)','Low-fi wireframes','Hi-fi Home mockup','Component inventory']
+},
+{
+  id:'content', num:'03', title:'Content Creation', sub:'Copy, case studies, resume, images', time:'6–10 hrs',
+  objectives:[
+    'Write all page copy in a consistent, authentic voice.',
+    'Turn each featured project into a narrative case study, not a feature list.',
+    'Prepare final image and media assets.'
+  ],
+  tasks:[
+    'Write a 150–200 word About section',
+    'Write 3–6 project case studies (problem → approach → result)',
+    'Draft resume/CV text and a downloadable PDF version',
+    'Source or generate hero art, project screenshots, and OG image',
+    'Write meta descriptions and alt text for every image'
+  ],
+  tools:[
+    {name:'Claude', tag:'Primary', why:'Maintains a consistent voice and follows a style guide across many long documents, which matters when writing 4–6 case studies that should read as one voice.', alt:'Alt: Jasper'},
+    {name:'ChatGPT', tag:'Fast Variants', why:'Quick to generate multiple headline or CTA variants to compare.', alt:'Alt: Copy.ai'},
+    {name:'Midjourney / DALL·E', tag:'Visuals', why:'Produces distinctive custom illustrations or Open Graph images fast, avoiding generic stock photography.', alt:'Alt: Ideogram'}
+  ],
+  prompts:[
+    'Write a 150-word "About" section for a frontend developer portfolio in a confident, conversational tone. Highlight 3 years of React experience and a focus on accessibility. Avoid clichés like "passionate" and "innovative."',
+    'Turn this raw project summary into a case study with Problem, Approach, and Result sections, 250 words total, written in first person: [paste project notes]'
+  ],
+  practices:[
+    'Lead every case study with the outcome or impact, not the tech stack',
+    'Keep the About section under 200 words',
+    'Do one human editing pass after AI drafts to remove generic phrasing'
+  ],
+  mistakes:[
+    'Writing case studies as tech feature lists instead of a story',
+    'Publishing unedited AI copy that reads generically',
+    'Skipping alt text, which hurts both accessibility and SEO'
+  ],
+  outputs:['Final copy document','3–6 case studies','Resume text + PDF','Image and OG assets']
+},
+{
+  id:'development', num:'04', title:'Development & Architecture', sub:'Scaffold, components, styling', time:'10–20 hrs',
+  objectives:[
+    'Scaffold a clean, typed React project with sensible routing.',
+    'Build reusable, accessible components from the design system.',
+    'Wire final content into working pages with dark mode support.'
+  ],
+  tasks:[
+    'Initialize project with Vite + React + TypeScript',
+    'Set up routing and a shared Layout component',
+    'Build components: Nav, ProjectCard, CaseStudy, ContactForm, Footer',
+    'Integrate styling approach (Tailwind or CSS Modules)',
+    'Implement dark mode, keyboard navigation, and responsive layout'
+  ],
+  tools:[
+    {name:'Claude Code / Cursor', tag:'Primary', why:'Understands the full repo, not just the open file — can scaffold a project, edit multiple files, and run/fix builds in one flow.', alt:'Alt: Windsurf'},
+    {name:'GitHub Copilot', tag:'Inline Autocomplete', why:'Fast for repetitive boilerplate (props, types, map/filter patterns) inside the editor.', alt:'Alt: Codeium'},
+    {name:'v0.dev', tag:'Component Source', why:'Reuse the generated components from the design stage directly as a starting point.', alt:'Alt: shadcn/ui + AI edits'}
+  ],
+  prompts:[
+    'Set up a Vite + React + TypeScript project with React Router, a Layout component with Nav and Footer, and empty routed pages for Home, Projects, About, and Contact. Include ESLint and Prettier config.',
+    'Build a reusable ProjectCard component in React + TypeScript that accepts title, description, tags, image, and link props, is keyboard-accessible, and matches this design: [paste tokens/mockup notes]'
+  ],
+  practices:[
+    'Commit early and often with descriptive messages',
+    'Componentize before adding fine-grained styling',
+    'Write semantic HTML and test keyboard navigation as you build'
+  ],
+  mistakes:[
+    'Prop-drilling instead of composing components',
+    'Leaving responsive testing until the very end',
+    'Ignoring focus states and keyboard-only navigation'
+  ],
+  outputs:['Working local React app','Reusable component library','All pages routed and populated']
+},
+{
+  id:'testing', num:'05', title:'Testing & QA', sub:'Functionality, performance, accessibility', time:'3–6 hrs',
+  objectives:[
+    'Verify the site works correctly across devices and browsers.',
+    'Meet a baseline performance and accessibility score before launch.',
+    'Catch broken links, typos, and layout issues.'
+  ],
+  tasks:[
+    'Manual QA pass across mobile, tablet, and desktop breakpoints',
+    'Run a Lighthouse audit and fix top issues',
+    'Test all links, the contact form, and resume download',
+    'Run an accessibility check (contrast, alt text, focus order)',
+    'Proofread all copy one final time'
+  ],
+  tools:[
+    {name:'Claude / ChatGPT', tag:'Primary', why:'Strong at translating raw Lighthouse or axe output into a prioritized, concrete fix list with code.', alt:'Alt: —'},
+    {name:'GitHub Copilot', tag:'Test Writing', why:'Speeds up writing unit and integration tests for interactive components like forms.', alt:'Alt: Claude Code'},
+    {name:'axe DevTools', tag:'Accessibility', why:'Purpose-built accessibility scanner that pairs well with AI-suggested fixes.', alt:'Alt: WAVE'}
+  ],
+  prompts:[
+    'Here is my Lighthouse report: [paste]. List the top 5 issues ranked by impact on real users, and give a code-level fix for each.',
+    'Write a Playwright test suite that checks: the contact form validates required fields, all nav links resolve, and the resume download link returns a valid file.'
+  ],
+  practices:[
+    'Test on at least one real mobile device, not just DevTools emulation',
+    'Fix accessibility issues before launch, not as a follow-up task',
+    'Batch all audit findings into one review pass instead of fixing piecemeal'
+  ],
+  mistakes:[
+    'Only testing in desktop Chrome',
+    'Ignoring color contrast warnings',
+    'Skipping a final link-check before publishing'
+  ],
+  outputs:['Completed QA checklist','Lighthouse score 90+','Zero broken links or console errors']
+},
+{
+  id:'deploy', num:'06', title:'Deployment & Growth', sub:'Ship, index, iterate', time:'2–4 hrs + ongoing',
+  objectives:[
+    'Deploy the site to a fast, reliable host with a custom domain.',
+    'Make the site discoverable and measurable from day one.',
+    'Set a cadence for future updates so the portfolio stays current.'
+  ],
+  tasks:[
+    'Deploy to Vercel or Netlify and connect a custom domain',
+    'Add analytics and verify events fire correctly',
+    'Write SEO metadata and structured data (JSON-LD) for key pages',
+    'Submit the sitemap to Google Search Console',
+    'Write and publish a short launch post'
+  ],
+  tools:[
+    {name:'Claude / ChatGPT', tag:'Primary', why:'Reliably generates well-formed meta tags, JSON-LD schema, and launch copy in one pass.', alt:'Alt: —'},
+    {name:'Vercel Analytics', tag:'Measurement', why:'Zero-config analytics that pairs naturally with a Vercel deployment.', alt:'Alt: Plausible, Google Analytics'},
+    {name:'Google Search Console', tag:'Indexing', why:'Essential (non-AI) tool to confirm the site is actually being crawled and indexed.', alt:'Alt: Bing Webmaster Tools'}
+  ],
+  prompts:[
+    'Generate an SEO-optimized meta title, meta description, and JSON-LD Person schema for a frontend developer portfolio homepage, given this bio: [paste bio]',
+    'Write a short, non-salesy launch post (under 150 words) announcing my new developer portfolio, for LinkedIn, in a confident and specific tone.'
+  ],
+  practices:[
+    'Set up analytics before launch, not after',
+    'Keep a visible changelog or "recently updated" note',
+    'Automate deployment via push-to-deploy so future edits take minutes'
+  ],
+  mistakes:[
+    'Forgetting a favicon or Open Graph image',
+    'Launching without any analytics installed',
+    'Letting the portfolio go stale after the initial launch'
+  ],
+  outputs:['Live deployed site','Analytics dashboard','SEO metadata + schema','Published launch post']
+}
+];
+
+const COMPARISON = [
+  {name:'Claude', best:'Long-form writing, structured docs, multi-file code edits', strength:'Consistent voice, follows detailed instructions over long context', cost:'Free / Paid tiers', curve:'Low'},
+  {name:'ChatGPT (GPT-4o)', best:'Rapid brainstorming, quick copy variants', strength:'Broad general knowledge, fast iteration', cost:'Free / Paid tiers', curve:'Low'},
+  {name:'v0.dev', best:'Generating real React + Tailwind components', strength:'Output is usable code, not just a mockup', cost:'Free tier + usage', curve:'Low'},
+  {name:'GitHub Copilot', best:'Inline autocomplete while coding', strength:'Fast boilerplate and repetitive patterns', cost:'Paid (free for students)', curve:'Low'},
+  {name:'Claude Code / Cursor', best:'Multi-file edits, running & fixing builds', strength:'Understands full repo context', cost:'Paid', curve:'Medium'},
+  {name:'Midjourney', best:'Custom illustrations, OG images', strength:'Distinctive visual output vs. stock photos', cost:'Paid', curve:'Medium'},
+  {name:'Perplexity', best:'Cited, current research', strength:'Answers include sources you can verify', cost:'Free / Paid', curve:'Low'}
+];
+
+const HELPER = [
+  {q:'Writing copy', tool:'Claude', desc:'Best for holding a consistent voice across your About section and multiple case studies. Start in Stage 03 — Content Creation.'},
+  {q:'Designing UI', tool:'v0.dev', desc:'Generates real React + Tailwind components from a text description, so your mockup becomes usable code. See Stage 02 — Design & Prototyping.'},
+  {q:'Writing code', tool:'Claude Code or Cursor', desc:'Full-repo context lets it scaffold, edit multiple files, and fix build errors in one flow. See Stage 04 — Development.'},
+  {q:'Fixing bugs', tool:'Claude / ChatGPT', desc:'Paste the error and surrounding code; ask for the root cause before the fix. See Stage 05 — Testing & QA.'},
+  {q:'SEO & launch', tool:'Claude / ChatGPT', desc:'Generates meta tags, JSON-LD schema, and launch copy quickly and correctly. See Stage 06 — Deployment & Growth.'}
+];
+
+const RESOURCES = [
+  {label:'react.dev — Official React Documentation', url:'https://react.dev'},
+  {label:'web.dev — Performance & Accessibility Guides', url:'https://web.dev'},
+  {label:'Josh W. Comeau — CSS & React Deep Dives', url:'https://www.joshwcomeau.com'},
+  {label:'Refactoring UI — Design for Developers', url:'https://www.refactoringui.com'},
+  {label:'freeCodeCamp — React Portfolio Tutorials', url:'https://www.freecodecamp.org'}
+];
+const COMMUNITIES = [
+  {label:'r/reactjs — Discussion & Feedback', url:'https://www.reddit.com/r/reactjs/'},
+  {label:'r/webdev — General Web Dev Community', url:'https://www.reddit.com/r/webdev/'},
+  {label:'Frontend Mentor — Community Portfolio Challenges', url:'https://www.frontendmentor.io'},
+  {label:'Dev.to — Write-ups & Portfolio Feedback', url:'https://dev.to'},
+  {label:'Indie Hackers — Ship & Share', url:'https://www.indiehackers.com'}
+];
+const KEYWORDS = ['react portfolio examples','developer portfolio best practices','v0.dev react components','claude code tutorial','portfolio seo for developers','accessible react components','case study writing for developers','vercel deployment guide'];
+const BONUS_PROMPTS = [
+  'Write 5 SEO- and accessibility-optimized alt-text descriptions for these project screenshots: [describe images]',
+  'Draft a 404 page in the same voice as my About section: [paste About copy]',
+  'Suggest 3 new project ideas that would fill a portfolio gap for a [role] specializing in [specialty]',
+  'Review this component for accessibility issues and suggest fixes: [paste code]',
+  'Write a short "now" or "currently building" widget update in my established voice: [paste voice sample]'
+];
+const FUTURE = [
+  {t:'CI/CD auto-deploy', d:'GitHub Actions pipeline so every push to main deploys automatically — no manual steps.'},
+  {t:'AI chat on the portfolio', d:'A small RAG-based assistant trained on your resume and projects to answer visitor questions.'},
+  {t:'Auto-generated changelog', d:'AI summarizes recent commits into a human-readable "recently shipped" section.'},
+  {t:'Scheduled SEO audits', d:'A recurring AI review of metadata and Lighthouse scores with a monthly fix list.'},
+  {t:'GitHub-powered "currently building" widget', d:'Pulls your latest active repo via the GitHub API and displays it automatically.'},
+  {t:'Auto-drafted social posts', d:'On every new project push, an AI drafts a launch post ready for your review.'}
+];
+
+/* ============ STATE ============ */
+const STORE_KEY = 'awa_react_portfolio_v1';
+let state = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return {theme:'light', stages:{}, };
+}
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+function stageState(id){
+  if(!state.stages[id]) state.stages[id] = {checked:{}, notes:'', bookmarked:false, openTab:0};
+  return state.stages[id];
+}
+
+/* ============ THEME ============ */
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', state.theme);
+  document.getElementById('themeToggle').textContent = state.theme==='dark' ? '☀' : '◐';
+}
+document.getElementById('themeToggle').addEventListener('click', function(){
+  state.theme = state.theme==='dark' ? 'light' : 'dark';
+  applyTheme(); save();
+});
+applyTheme();
+
+document.getElementById('tbDate').textContent = new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'2-digit'});
+
+/* ============ PIPELINE SVG ============ */
+function renderPipeline(){
+  const w = 1120, h = 220, n = STAGES.length;
+  const marginX = 90;
+  const step = (w - marginX*2) / (n-1);
+  const y = 110;
+  let svg = '<svg id="pipelineSvg" viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">';
+  svg += '<line x1="'+marginX+'" y1="'+y+'" x2="'+(w-marginX)+'" y2="'+y+'" stroke="var(--line-strong)" stroke-width="1.5" stroke-dasharray="2 6"/>';
+  svg += '<line x1="'+marginX+'" y1="40" x2="'+marginX+'" y2="50" stroke="var(--ink-faint)" stroke-width="1"/>';
+  svg += '<line x1="'+(w-marginX)+'" y1="40" x2="'+(w-marginX)+'" y2="50" stroke="var(--ink-faint)" stroke-width="1"/>';
+  svg += '<line x1="'+marginX+'" y1="45" x2="'+(w-marginX)+'" y2="45" stroke="var(--ink-faint)" stroke-width="1"/>';
+  svg += '<text x="'+(w/2)+'" y="30" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="var(--ink-faint)">FULL PIPELINE — EST. 27\\u201352 HRS</text>';
+  STAGES.forEach(function(s, i){
+    const cx = marginX + step*i;
+    svg += '<g class="pipe-node" data-target="'+s.id+'">';
+    svg += '<circle cx="'+cx+'" cy="'+y+'" r="26" fill="var(--card)" stroke="var(--line-strong)" stroke-width="1.5"/>';
+    svg += '<text x="'+cx+'" y="'+(y+5)+'" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">'+s.num+'</text>';
+    svg += '<text x="'+cx+'" y="'+(y+52)+'" text-anchor="middle" font-size="11" fill="var(--ink-soft)" font-family="Inter">'+wrapLabel(s.title)+'</text>';
+    svg += '<text x="'+cx+'" y="'+(y-38)+'" text-anchor="middle" font-size="10" fill="var(--accent)">'+s.time+'</text>';
+    svg += '</g>';
+  });
+  svg += '</svg>';
+  document.getElementById('svgHolder').innerHTML = svg;
+  document.querySelectorAll('.pipe-node').forEach(function(node){
+    node.addEventListener('click', function(){
+      const id = node.getAttribute('data-target');
+      const card = document.getElementById('stage-'+id);
+      if(card){
+        card.classList.add('open');
+        card.querySelector('.stage-body').style.maxHeight = card.querySelector('.stage-body-inner').scrollHeight+40+'px';
+        card.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    });
+  });
+}
+function wrapLabel(title){
+  const words = title.split(' ');
+  if(words.length<=2) return title;
+  const mid = Math.ceil(words.length/2);
+  return words.slice(0,mid).join(' ');
+}
+
+/* ============ DECISION HELPER ============ */
+function renderHelper(){
+  const opts = document.getElementById('helperOpts');
+  opts.innerHTML = HELPER.map(function(h,i){ return '<button class="helper-opt" data-i="'+i+'">'+h.q+'</button>'; }).join('');
+  const result = document.getElementById('helperResult');
+  opts.querySelectorAll('.helper-opt').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      opts.querySelectorAll('.helper-opt').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      const h = HELPER[+btn.getAttribute('data-i')];
+      result.innerHTML = '<div class="tool-name">'+h.tool+'</div><p>'+h.desc+'</p>';
+      result.classList.add('show');
+    });
+  });
+}
+
+/* ============ STAGES RENDER ============ */
+const TABS = ['Objectives','Tasks','AI Tools','Prompts','Best Practices','Mistakes','Outputs','Notes'];
+
+function renderStages(){
+  const holder = document.getElementById('stagesHolder');
+  holder.innerHTML = STAGES.map(function(s, idx){
+    const st = stageState(s.id);
+    return stageCardHTML(s, idx, st);
+  }).join('');
+
+  // wire up interactivity
+  STAGES.forEach(function(s){
+    const card = document.getElementById('stage-'+s.id);
+    const head = card.querySelector('.stage-head');
+    head.addEventListener('click', function(e){
+      if(e.target.closest('.star-btn')) return;
+      card.classList.toggle('open');
+      const body = card.querySelector('.stage-body');
+      body.style.maxHeight = card.classList.contains('open') ? (card.querySelector('.stage-body-inner').scrollHeight+40)+'px' : '0px';
+    });
+    card.querySelector('.star-btn').addEventListener('click', function(e){
+      e.stopPropagation();
+      const st = stageState(s.id);
+      st.bookmarked = !st.bookmarked;
+      save();
+      e.currentTarget.classList.toggle('active', st.bookmarked);
+      e.currentTarget.textContent = st.bookmarked ? '★' : '☆';
+    });
+    card.querySelectorAll('.tab-btn').forEach(function(tb){
+      tb.addEventListener('click', function(){
+        const panelId = tb.getAttribute('data-panel');
+        card.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+        card.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+        tb.classList.add('active');
+        card.querySelector('#'+panelId).classList.add('active');
+        const body = card.querySelector('.stage-body');
+        if(card.classList.contains('open')) body.style.maxHeight = (card.querySelector('.stage-body-inner').scrollHeight+40)+'px';
+      });
+    });
+    card.querySelectorAll('.task-item input').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        const st = stageState(s.id);
+        st.checked[cb.getAttribute('data-task')] = cb.checked;
+        save();
+        cb.closest('.task-item').classList.toggle('checked', cb.checked);
+        updateProgress();
+      });
+    });
+    const notesArea = card.querySelector('.notes-area');
+    if(notesArea){
+      notesArea.addEventListener('input', function(){
+        stageState(s.id).notes = notesArea.value;
+        save();
+      });
+    }
+    card.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const txt = btn.getAttribute('data-copy');
+        navigator.clipboard && navigator.clipboard.writeText(txt).then(function(){
+          const orig = btn.textContent; btn.textContent = 'COPIED';
+          setTimeout(function(){ btn.textContent = orig; }, 1200);
+        });
+      });
+    });
+  });
+}
+
+function stageCardHTML(s, idx, st){
+  const objectivesHTML = '<ul class="plain">' + s.objectives.map(function(o){ return '<li>'+o+'</li>'; }).join('') + '</ul>';
+  const tasksHTML = s.tasks.map(function(t, i){
+    const key = 't'+i;
+    const checked = st.checked[key] ? 'checked' : '';
+    const cls = st.checked[key] ? 'task-item checked' : 'task-item';
+    return '<div class="'+cls+'"><input type="checkbox" data-task="'+key+'" id="'+s.id+'-'+key+'" '+checked+'><label for="'+s.id+'-'+key+'">'+t+'</label></div>';
+  }).join('');
+  const toolsHTML = '<div class="tool-grid">' + s.tools.map(function(t){
+    return '<div class="tool-card"><span class="tag">'+t.tag+'</span><h4>'+t.name+'</h4><p>'+t.why+'</p><div class="alt">'+t.alt+'</div></div>';
+  }).join('') + '</div>';
+  const promptsHTML = s.prompts.map(function(p){
+    return '<div class="prompt-box">'+escapeHtml(p)+'<button class="copy-btn" data-copy="'+escapeAttr(p)+'">COPY</button></div>';
+  }).join('');
+  const practicesHTML = '<ul class="plain">' + s.practices.map(function(p){ return '<li>'+p+'</li>'; }).join('') + '</ul>';
+  const mistakesHTML = s.mistakes.map(function(m){ return '<div class="mistake-item">'+m+'</div>'; }).join('');
+  const outputsHTML = s.outputs.map(function(o){ return '<span class="output-chip">'+o+'</span>'; }).join('');
+  const notesHTML = '<span class="notes-label">Your Notes — saved automatically</span><textarea class="notes-area" placeholder="Jot notes, links, or decisions for this stage...">'+escapeHtml(st.notes||'')+'</textarea>';
+
+  const panels = [
+    {id:'objectives', label:'Objectives', body:objectivesHTML},
+    {id:'tasks', label:'Tasks', body:tasksHTML},
+    {id:'tools', label:'AI Tools', body:toolsHTML},
+    {id:'prompts', label:'Prompts', body:promptsHTML},
+    {id:'practices', label:'Best Practices', body:practicesHTML},
+    {id:'mistakes', label:'Mistakes', body:mistakesHTML},
+    {id:'outputs', label:'Outputs', body:outputsHTML},
+    {id:'notes', label:'Notes', body:notesHTML}
+  ];
+
+  const tabsHTML = panels.map(function(p, i){
+    return '<button class="tab-btn'+(i===0?' active':'')+'" data-panel="'+s.id+'-'+p.id+'">'+p.label+'</button>';
+  }).join('');
+  const panelsHTML = panels.map(function(p, i){
+    return '<div class="tab-panel'+(i===0?' active':'')+'" id="'+s.id+'-'+p.id+'">'+p.body+'</div>';
+  }).join('');
+
+  return (
+    '<div class="stage-card" id="stage-'+s.id+'">' +
+      '<div class="stage-head">' +
+        '<div class="stage-num">'+s.num+'</div>' +
+        '<div class="stage-titles"><h3>'+s.title+'</h3><div class="stage-sub">'+s.sub+'</div></div>' +
+        '<div class="stage-meta">' +
+          '<span class="time-chip">'+s.time+'</span>' +
+          '<button class="star-btn'+(st.bookmarked?' active':'')+'">'+(st.bookmarked?'★':'☆')+'</button>' +
+          '<span class="chevron">▾</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="stage-body"><div class="stage-body-inner">' +
+        '<div class="tabs">'+tabsHTML+'</div>' +
+        panelsHTML +
+      '</div></div>' +
+    '</div>'
+  );
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; });
+}
+function escapeAttr(str){
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ============ PROGRESS ============ */
+function updateProgress(){
+  let total = 0, done = 0;
+  STAGES.forEach(function(s){
+    const st = stageState(s.id);
+    s.tasks.forEach(function(t, i){
+      total++;
+      if(st.checked['t'+i]) done++;
+    });
+  });
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressFill').style.width = pct+'%';
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('taskCountStat').textContent = total;
+}
+
+/* ============ COMPARISON TABLE ============ */
+function renderComparison(){
+  let html = '<thead><tr><th>Tool</th><th>Best For</th><th>Strength</th><th>Cost Tier</th><th>Learning Curve</th></tr></thead><tbody>';
+  html += COMPARISON.map(function(c){
+    return '<tr><td>'+c.name+'</td><td>'+c.best+'</td><td>'+c.strength+'</td><td>'+c.cost+'</td><td>'+c.curve+'</td></tr>';
+  }).join('');
+  html += '</tbody>';
+  document.getElementById('compareTable').innerHTML = html;
+}
+
+/* ============ SUMMARY SECTION ============ */
+function renderSummary(){
+  document.getElementById('workflowSummaryText').textContent =
+    'This pipeline takes a React developer portfolio from a blank page to a live, discoverable site in six stages: Discovery & Planning grounds every later decision in a clear goal and audience; Design & Prototyping turns that plan into a visual system and reusable component list; Content Creation produces the actual words and images in your voice; Development & Architecture turns the design into working, accessible React code; Testing & QA catches issues before anyone else sees them; and Deployment & Growth ships the site and sets it up to keep improving. AI tools are chosen per stage for what they\'re actually good at — long-form writing and planning with Claude, component generation with v0.dev, in-editor coding with Claude Code or Copilot — rather than one tool for everything.';
+
+  document.getElementById('stackList').innerHTML = [
+    ['Claude','Planning, writing, code'],['v0.dev','UI component generation'],
+    ['GitHub Copilot / Claude Code','In-editor development'],['Midjourney','Custom visuals'],
+    ['Vercel','Hosting, deploy, analytics']
+  ].map(function(x){ return '<div class="stack-item"><span>'+x[0]+'</span><span>'+x[1]+'</span></div>'; }).join('');
+
+  document.getElementById('resourceList').innerHTML = RESOURCES.map(function(r){
+    return '<a href="'+r.url+'" target="_blank" rel="noopener">'+r.label+'</a>';
+  }).join('');
+  document.getElementById('communityList').innerHTML = COMMUNITIES.map(function(r){
+    return '<a href="'+r.url+'" target="_blank" rel="noopener">'+r.label+'</a>';
+  }).join('');
+  document.getElementById('keywordCloud').innerHTML = KEYWORDS.map(function(k){
+    return '<span class="tag-chip">'+k+'</span>';
+  }).join('');
+  document.getElementById('bonusPrompts').innerHTML = BONUS_PROMPTS.map(function(p){
+    return '<div class="prompt-box">'+escapeHtml(p)+'<button class="copy-btn" data-copy="'+escapeAttr(p)+'">COPY</button></div>';
+  }).join('');
+  document.getElementById('bonusPrompts').querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      navigator.clipboard && navigator.clipboard.writeText(btn.getAttribute('data-copy')).then(function(){
+        const orig = btn.textContent; btn.textContent='COPIED'; setTimeout(function(){ btn.textContent=orig; },1200);
+      });
+    });
+  });
+  document.getElementById('futureList').innerHTML = FUTURE.map(function(f){
+    return '<li><b>'+f.t+'</b><span style="color:var(--ink-soft); font-size:13.5px;">'+f.d+'</span></li>';
+  }).join('');
+}
+
+/* ============ MISC ============ */
+document.getElementById('printBtn').addEventListener('click', function(){ window.print(); });
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(confirm('Reset all saved progress, notes, and bookmarks? This cannot be undone.')){
+    localStorage.removeItem(STORE_KEY);
+    state = {theme: state.theme, stages:{}};
+    save();
+    renderStages();
+    updateProgress();
+  }
+});
+
+/* ============ INIT ============ */
+renderPipeline();
+renderHelper();
+renderStages();
+renderComparison();
+renderSummary();
+updateProgress();
+
+})();
+</script>
+</body>
+</html>
