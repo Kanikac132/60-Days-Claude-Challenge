@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Intelligence Studio</title>
+<style>
+  /* ============ TOKENS ============ */
+  :root[data-theme="dark"]{
+    --bg:#0D1512; --bg-2:#121C18; --surface:#16211C; --surface-2:#1D2A24;
+    --border:rgba(243,239,228,0.10); --border-strong:rgba(243,239,228,0.18);
+    --text:#F3EFE4; --text-dim:rgba(243,239,228,0.64); --text-faint:rgba(243,239,228,0.38);
+    --brass:#C9A15A; --brass-soft:rgba(201,161,90,0.16); --brass-line:rgba(201,161,90,0.45);
+    --signal:#5FD4C4; --signal-soft:rgba(95,212,196,0.14);
+    --alert:#E2665A; --alert-soft:rgba(226,102,90,0.14);
+    --ok:#8BC48A; --ok-soft:rgba(139,196,138,0.14);
+    --shadow:0 24px 60px rgba(0,0,0,0.5); --track:rgba(243,239,228,0.09);
+  }
+  :root[data-theme="light"]{
+    --bg:#F3EFE4; --bg-2:#EAE3D2; --surface:#FFFDF8; --surface-2:#FBF6EA;
+    --border:rgba(23,32,27,0.11); --border-strong:rgba(23,32,27,0.2);
+    --text:#17201B; --text-dim:rgba(23,32,27,0.66); --text-faint:rgba(23,32,27,0.42);
+    --brass:#8C6B32; --brass-soft:rgba(140,107,50,0.12); --brass-line:rgba(140,107,50,0.5);
+    --signal:#1F8C7D; --signal-soft:rgba(31,140,125,0.12);
+    --alert:#B23D33; --alert-soft:rgba(178,61,51,0.12);
+    --ok:#3E7F3D; --ok-soft:rgba(62,127,61,0.12);
+    --shadow:0 24px 50px rgba(30,25,10,0.14); --track:rgba(23,32,27,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(1200px 600px at 12% -10%, var(--bg-2), var(--bg) 60%);
+    color:var(--text);
+    font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    transition:background .4s ease,color .3s ease;
+  }
+  ::selection{background:var(--brass-soft);color:var(--text);}
+  :focus-visible{outline:2px solid var(--signal);outline-offset:2px;border-radius:4px;}
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+
+  h1,h2,h3,h4{font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-weight:600;margin:0;letter-spacing:.2px;}
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;}
+  p{margin:0;}
+  button{font-family:inherit;cursor:pointer;}
+  textarea,input{font-family:inherit;}
+
+  /* ============ SHELL ============ */
+  .app{max-width:1180px;margin:0 auto;padding:0 24px 90px;}
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 24px;margin:0 -24px 30px;
+    background:linear-gradient(to bottom, var(--bg) 78%, transparent);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex;align-items:baseline;gap:10px;}
+  .brand-mark{
+    width:34px;height:34px;border-radius:8px;
+    background:linear-gradient(150deg,var(--brass),var(--signal));
+    display:flex;align-items:center;justify-content:center;
+    font-family:ui-serif,Georgia,serif;font-weight:700;color:#0D1512;font-size:15px;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);
+  }
+  .brand-text h1{font-size:19px;}
+  .brand-text span{display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-faint);margin-top:1px;}
+  .topbar-right{display:flex;align-items:center;gap:18px;}
+  .steps{display:flex;align-items:center;gap:0;font-size:12.5px;color:var(--text-faint);}
+  .step{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:20px;transition:all .25s;cursor:default;}
+  .step .num{font-family:ui-monospace,monospace;font-size:11px;border:1px solid var(--border-strong);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
+  .step.reached{cursor:pointer;color:var(--text-dim);}
+  .step.active{color:var(--text);background:var(--surface);box-shadow:0 0 0 1px var(--border);}
+  .step.active .num{background:var(--brass);border-color:var(--brass);color:#221a0c;}
+  .step.done .num{background:var(--signal-soft);border-color:var(--signal);color:var(--signal);}
+  .step-sep{width:16px;height:1px;background:var(--border-strong);margin:0 2px;}
+  .theme-toggle{
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--text-dim);
+    padding:7px 13px;border-radius:20px;font-size:12px;letter-spacing:.3px;
+    transition:all .2s;
+  }
+  .theme-toggle:hover{color:var(--text);border-color:var(--brass-line);}
+
+  .view{display:none;animation:fadeUp .5s ease;}
+  .view.active{display:block;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ============ INTAKE ============ */
+  .hero{margin:10px 0 34px;}
+  .hero .eyebrow{color:var(--brass);font-size:12px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:10px;display:block;}
+  .hero h2{font-size:clamp(26px,4vw,38px);line-height:1.15;max-width:680px;}
+  .hero p.sub{margin-top:12px;color:var(--text-dim);font-size:15px;max-width:560px;line-height:1.6;}
+
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    box-shadow:var(--shadow);padding:26px;
+  }
+  .field-group{margin-bottom:26px;}
+  .field-group:last-child{margin-bottom:0;}
+  .field-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+  .field-label .lab{font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--text);}
+  .field-label .hint{font-size:11.5px;color:var(--text-faint);}
+
+  .pills{display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{
+    border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text-dim);
+    padding:9px 15px;border-radius:22px;font-size:13px;transition:all .18s;
+  }
+  .pill:hover{border-color:var(--brass-line);color:var(--text);}
+  .pill.selected{background:var(--brass-soft);border-color:var(--brass);color:var(--text);font-weight:600;}
+  .other-input{
+    margin-top:9px;width:100%;max-width:320px;padding:9px 12px;border-radius:10px;
+    border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);
+    font-size:13px;display:none;
+  }
+  .other-input.show{display:block;animation:fadeUp .25s ease;}
+
+  .intensity-desc{margin-top:10px;font-size:12.5px;color:var(--text-faint);min-height:18px;}
+
+  textarea#contentText{
+    width:100%;min-height:150px;resize:vertical;padding:14px 16px;border-radius:12px;
+    border:1px solid var(--border-strong);background:var(--surface-2);color:var(--text);
+    font-size:14.5px;line-height:1.6;
+  }
+  .char-count{text-align:right;font-size:11px;color:var(--text-faint);margin-top:6px;}
+
+  .dropzone{
+    border:1.5px dashed var(--border-strong);border-radius:14px;padding:28px 20px;
+    text-align:center;color:var(--text-faint);font-size:13px;transition:all .2s;
+    background:var(--surface-2);
+  }
+  .dropzone.drag{border-color:var(--signal);color:var(--signal);background:var(--signal-soft);}
+  .dropzone strong{color:var(--text-dim);}
+  .dropzone input{display:none;}
+  .browse-link{color:var(--brass);text-decoration:underline;cursor:pointer;}
+
+  .thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+  .thumb{
+    position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;
+    border:1px solid var(--border-strong);background:var(--surface-2);
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb .rm{
+    position:absolute;top:3px;right:3px;width:19px;height:19px;border-radius:50%;
+    background:rgba(0,0,0,.6);color:#fff;border:none;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;
+  }
+
+  .checkbox-row{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px;color:var(--text-dim);}
+  .checkbox-row input{accent-color:var(--brass);width:15px;height:15px;}
+
+  .cta-row{display:flex;align-items:center;gap:16px;margin-top:30px;}
+  .btn-primary{
+    background:linear-gradient(135deg,var(--brass),#a97f3d);color:#221a0c;border:none;
+    padding:14px 26px;border-radius:12px;font-size:14.5px;font-weight:700;letter-spacing:.2px;
+    box-shadow:0 10px 26px rgba(201,161,90,.28);transition:transform .18s, box-shadow .18s;
+  }
+  .btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 14px 30px rgba(201,161,90,.36);}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;}
+  .btn-secondary{
+    background:transparent;border:1px solid var(--border-strong);color:var(--text-dim);
+    padding:13px 20px;border-radius:12px;font-size:13.5px;transition:all .18s;
+  }
+  .btn-secondary:hover{border-color:var(--brass-line);color:var(--text);}
+  .validation-msg{font-size:12.5px;color:var(--alert);}
+
+  /* ============ PIPELINE VIEW ============ */
+  .pipeline-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:14px;}
+  .pipeline-head h2{font-size:24px;}
+  .pipeline-head p{color:var(--text-dim);font-size:13.5px;margin-top:6px;}
+  .progress-track{width:100%;height:5px;border-radius:4px;background:var(--track);overflow:hidden;margin-bottom:28px;}
+  .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--brass),var(--signal));transition:width .5s ease;}
+
+  .pipeline-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:22px;align-items:start;}
+  @media (max-width:860px){.pipeline-grid{grid-template-columns:1fr;}}
+
+  .stations{display:flex;flex-direction:column;gap:12px;}
+  .station{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;
+    transition:all .3s ease;
+  }
+  .station.active{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal-soft),0 10px 24px rgba(0,0,0,.15);}
+  .station.done{border-color:var(--border-strong);}
+  .station.error{border-color:var(--alert);}
+  .station-top{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;}
+  .station-id{display:flex;align-items:center;gap:12px;}
+  .station-dot{
+    width:30px;height:30px;border-radius:50%;flex:none;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+    background:var(--surface-2);border:1px solid var(--border-strong);color:var(--text-faint);
+    font-family:ui-monospace,monospace;
+  }
+  .station.active .station-dot{border-color:var(--signal);color:var(--signal);animation:pulse 1.4s infinite;}
+  .station.done .station-dot{border-color:var(--ok);color:var(--ok);background:var(--ok-soft);}
+  .station.error .station-dot{border-color:var(--alert);color:var(--alert);background:var(--alert-soft);}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--signal-soft);}50%{box-shadow:0 0 0 6px transparent;}}
+  .station-name{font-size:14.5px;font-weight:600;}
+  .station-focus{font-size:12px;color:var(--text-faint);margin-top:2px;}
+  .station-score{display:flex;align-items:center;gap:10px;}
+  .score-badge{font-family:ui-monospace,monospace;font-size:15px;font-weight:700;color:var(--brass);}
+  .station-status-text{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;}
+  .caret{color:var(--text-faint);font-size:12px;transition:transform .25s;}
+  .station.open .caret{transform:rotate(90deg);}
+  .station-detail{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+  .station.open .station-detail{max-height:900px;}
+  .station-detail-inner{padding-top:14px;margin-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--text-dim);line-height:1.65;}
+  .station-detail-inner h5{font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-faint);margin:14px 0 6px;}
+  .station-detail-inner h5:first-child{margin-top:0;}
+  .station-detail-inner ul{margin:0;padding-left:18px;}
+  .station-detail-inner li{margin-bottom:5px;}
+  .retry-btn{margin-top:10px;font-size:12px;background:var(--alert-soft);color:var(--alert);border:1px solid var(--alert);padding:6px 12px;border-radius:8px;}
+
+  .wire-panel{
+    background:var(--bg-2);border:1px solid var(--border);border-radius:14px;
+    padding:16px 18px;height:100%;min-height:340px;display:flex;flex-direction:column;
+  }
+  .wire-title{font-size:11px;text-transform:uppercase;letter-spacing:1.6px;color:var(--text-faint);
+    border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;display:flex;justify-content:space-between;}
+  .wire-title .live-dot{width:7px;height:7px;border-radius:50%;background:var(--signal);display:inline-block;margin-right:6px;animation:pulse 1.2s infinite;}
+  .wire-log{flex:1;overflow-y:auto;max-height:520px;padding-right:4px;}
+  .wire-line{
+    font-family:ui-monospace,monospace;font-size:11.5px;line-height:1.7;color:var(--text-dim);
+    padding-left:12px;border-left:2px solid var(--border-strong);margin-bottom:9px;animation:fadeUp .3s ease;
+  }
+  .wire-line .ts{color:var(--text-faint);margin-right:8px;}
+  .wire-line.err{border-left-color:var(--alert);color:var(--alert);}
+  .wire-line.ok{border-left-color:var(--ok);}
+  .wire-log::-webkit-scrollbar{width:6px;}
+  .wire-log::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:6px;}
+
+  .error-banner{
+    background:var(--alert-soft);border:1px solid var(--alert);color:var(--alert);
+    border-radius:12px;padding:14px 18px;margin:16px 0;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  }
+  .error-banner button{background:transparent;border:1px solid var(--alert);color:var(--alert);padding:7px 13px;border-radius:8px;font-size:12px;}
+
+  /* ============ REPORT ============ */
+  .report-hero{display:flex;gap:30px;align-items:center;flex-wrap:wrap;margin-bottom:34px;}
+  .gauge-wrap{flex:none;text-align:center;}
+  .gauge-label{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-faint);margin-top:4px;}
+  .exec-summary{flex:1;min-width:280px;}
+  .exec-summary .eyebrow{color:var(--brass);font-size:11.5px;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px;}
+  .exec-summary p{font-size:15px;line-height:1.7;color:var(--text-dim);}
+
+  .section-title{display:flex;align-items:baseline;gap:10px;margin:44px 0 16px;}
+  .section-title h3{font-size:20px;}
+  .section-title .idx{font-family:ui-monospace,monospace;color:var(--brass);font-size:12px;}
+  .section-title .rule{flex:1;height:1px;background:var(--border);}
+
+  .health-card{padding:22px 24px;line-height:1.7;color:var(--text-dim);font-size:14px;}
+
+  .breakdown-list{display:flex;flex-direction:column;gap:10px;}
+  .breakdown-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;}
+  .breakdown-top{display:flex;align-items:center;gap:14px;cursor:pointer;}
+  .breakdown-top .bname{flex:none;width:190px;font-size:13.5px;font-weight:600;}
+  .breakdown-bar-track{flex:1;height:8px;background:var(--track);border-radius:6px;overflow:hidden;}
+  .breakdown-bar-fill{height:100%;background:linear-gradient(90deg,var(--signal),var(--brass));width:0%;transition:width 1s ease;border-radius:6px;}
+  .breakdown-score{width:40px;text-align:right;font-family:ui-monospace,monospace;font-weight:700;color:var(--brass);}
+  .breakdown-detail{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+  .breakdown-row.open .breakdown-detail{max-height:700px;}
+  .breakdown-detail-inner{padding-top:14px;margin-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--text-dim);line-height:1.65;}
+  .breakdown-detail-inner ul{margin:6px 0 0;padding-left:18px;}
+  .tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .tag{font-size:11px;padding:3px 9px;border-radius:12px;border:1px solid var(--border-strong);color:var(--text-faint);}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:760px){.grid-2{grid-template-columns:1fr;}}
+  .impact-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--brass);border-radius:10px;padding:16px 18px;font-size:13.5px;line-height:1.6;color:var(--text-dim);}
+  .impact-card b{color:var(--text);}
+
+  .predicted{
+    display:flex;align-items:center;gap:20px;background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;padding:20px 22px;
+  }
+  .predicted .badge{
+    font-family:ui-monospace,monospace;font-size:13px;font-weight:700;color:#221a0c;
+    background:var(--brass);padding:8px 16px;border-radius:20px;flex:none;
+  }
+  .predicted .note{font-size:12px;color:var(--text-faint);margin-top:8px;}
+  .predicted p{font-size:14px;color:var(--text-dim);line-height:1.6;}
+
+  .ba-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media (max-width:760px){.ba-wrap{grid-template-columns:1fr;}}
+  .ba-col{border-radius:12px;padding:18px 20px;font-size:13.5px;line-height:1.65;}
+  .ba-before{background:var(--surface-2);border:1px dashed var(--border-strong);color:var(--text-faint);}
+  .ba-after{background:var(--brass-soft);border:1px solid var(--brass-line);color:var(--text);}
+  .ba-label{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:8px;display:block;}
+  .ba-before .ba-label{color:var(--text-faint);}
+  .ba-after .ba-label{color:var(--brass);}
+
+  .rewrite-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px 24px;font-size:14px;line-height:1.75;color:var(--text);white-space:pre-wrap;}
+  .copy-btn{margin-top:14px;font-size:12px;}
+
+  .chip-list{display:flex;flex-direction:column;gap:10px;}
+  .chip-item{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13.5px;
+  }
+  .chip-item button{flex:none;font-size:11px;padding:6px 11px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border-strong);color:var(--text-dim);}
+  .chip-item button:hover{color:var(--text);border-color:var(--brass-line);}
+
+  .checklist{display:flex;flex-direction:column;gap:9px;}
+  .check-item{display:flex;align-items:flex-start;gap:11px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13.5px;color:var(--text-dim);cursor:pointer;transition:all .2s;}
+  .check-item.checked{opacity:.55;}
+  .check-item.checked .check-text{text-decoration:line-through;}
+  .check-box{flex:none;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border-strong);margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ok);}
+  .check-item.checked .check-box{background:var(--ok-soft);border-color:var(--ok);}
+
+  .prompt-chip{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 16px;font-size:13px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:9px;}
+  .prompt-chip .txt{font-style:italic;}
+
+  .footer-note{margin-top:60px;padding-top:20px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text-faint);line-height:1.7;}
+
+  .skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:shimmer 1.6s infinite;border-radius:8px;}
+  @keyframes shimmer{0%{background-position:100% 0;}100%{background-position:0 0;}}
+
+  .thumbnail-strip{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;}
+  .thumbnail-strip img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border-strong);}
+
+  .top-actions{display:flex;justify-content:flex-end;gap:12px;margin-bottom:10px;}
+</style>
+</head>
+<body data-theme="dark">
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">CI</div>
+      <div class="brand-text">
+        <h1>Content Intelligence Studio</h1>
+        <span>AI Editorial Review Desk</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="steps" id="stepsNav">
+        <div class="step active" data-target="view-intake"><span class="num">1</span>Intake</div>
+        <div class="step-sep"></div>
+        <div class="step" data-target="view-pipeline"><span class="num">2</span>Review Desk</div>
+        <div class="step-sep"></div>
+        <div class="step" data-target="view-report"><span class="num">3</span>Report</div>
+      </div>
+      <button class="theme-toggle" id="themeToggle">Light mode</button>
+    </div>
+  </div>
+
+  <!-- ============ VIEW 1: INTAKE ============ -->
+  <section class="view active" id="view-intake">
+    <div class="hero">
+      <span class="eyebrow">Before you publish</span>
+      <h2>Send your content to the review desk.</h2>
+      <p class="sub">Tell us what you made and why. Claude will assemble a custom panel of specialist reviewers, read your content end to end, and hand back a full editorial report — scores, rewrites, and next steps included.</p>
+    </div>
+
+    <div class="card">
+      <div class="field-group">
+        <div class="field-label"><span class="lab">What type of content is this?</span></div>
+        <div class="pills" data-group="contentType">
+          <button class="pill selected" data-value="Social media post/caption">Social post / caption</button>
+          <button class="pill" data-value="Video/Reel/Short script or transcript">Video / Reel / Short</button>
+          <button class="pill" data-value="Blog post/article">Blog post / article</button>
+          <button class="pill" data-value="Thumbnail or image/graphic">Thumbnail / image</button>
+          <button class="pill" data-value="Email or newsletter">Email / newsletter</button>
+          <button class="pill" data-value="Ad copy">Ad copy</button>
+          <button class="pill" data-value="__other__">Other</button>
+        </div>
+        <input type="text" class="other-input" id="contentTypeOther" placeholder="Describe the content type">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="lab">Which platform is it for?</span></div>
+        <div class="pills" data-group="platform">
+          <button class="pill selected" data-value="Instagram">Instagram</button>
+          <button class="pill" data-value="YouTube">YouTube</button>
+          <button class="pill" data-value="TikTok">TikTok</button>
+          <button class="pill" data-value="LinkedIn">LinkedIn</button>
+          <button class="pill" data-value="X / Twitter">X / Twitter</button>
+          <button class="pill" data-value="Blog / general web">Blog / web</button>
+          <button class="pill" data-value="Email">Email</button>
+          <button class="pill" data-value="__other__">Other</button>
+        </div>
+        <input type="text" class="other-input" id="platformOther" placeholder="Name the platform">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="lab">What's your primary goal?</span></div>
+        <div class="pills" data-group="goal">
+          <button class="pill selected" data-value="Grow engagement and reach">Grow engagement/reach</button>
+          <button class="pill" data-value="Drive conversions or sales">Drive conversions/sales</button>
+          <button class="pill" data-value="Build brand and authority">Build brand/authority</button>
+          <button class="pill" data-value="Educate or inform the audience">Educate/inform</button>
+          <button class="pill" data-value="Just get an honest quality review">Honest quality feedback</button>
+          <button class="pill" data-value="__other__">Other</button>
+        </div>
+        <input type="text" class="other-input" id="goalOther" placeholder="Describe your goal">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="lab">How critical should the review be?</span></div>
+        <div class="pills" data-group="intensity">
+          <button class="pill" data-value="Light and encouraging">Light &amp; encouraging</button>
+          <button class="pill selected" data-value="Balanced and constructive">Balanced, constructive</button>
+          <button class="pill" data-value="Brutally honest and critical">Brutally honest</button>
+        </div>
+        <div class="intensity-desc" id="intensityDesc">Fair and constructive — calls out real weaknesses but frames feedback usefully.</div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="lab">Content text</span><span class="hint">Caption, script, transcript, or article — optional if you're only uploading an image</span></div>
+        <textarea id="contentText" placeholder="Paste your caption, script, transcript, or article text here..."></textarea>
+        <div class="char-count" id="charCount">0 characters</div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label"><span class="lab">Images (thumbnail, screenshot, analytics, etc.)</span><span class="hint">Optional · Claude reviews images directly</span></div>
+        <div class="dropzone" id="dropzone">
+          <strong>Drag & drop images here</strong>, or <span class="browse-link" id="browseLink">browse files</span>
+          <input type="file" id="fileInput" accept="image/*" multiple>
+        </div>
+        <div class="thumbs" id="thumbs"></div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="isAnalytics">
+          <label for="isAnalytics">One or more of these images is an analytics/performance screenshot</label>
+        </div>
+      </div>
+
+      <div class="cta-row">
+        <button class="btn-primary" id="submitBtn" disabled>Send to Review Desk →</button>
+        <span class="validation-msg" id="validationMsg">Add some text or at least one image to continue.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW 2: PIPELINE ============ -->
+  <section class="view" id="view-pipeline">
+    <div class="pipeline-head">
+      <div>
+        <h2>The review desk is live.</h2>
+        <p id="pipelineSub">Assembling a specialist panel for your content...</p>
+      </div>
+      <button class="btn-secondary" id="backToIntake">← Edit submission</button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div id="pipelineError"></div>
+
+    <div class="pipeline-grid">
+      <div class="stations" id="stations">
+        <div class="station skeleton" style="height:70px;"></div>
+      </div>
+      <div class="wire-panel">
+        <div class="wire-title"><span><span class="live-dot"></span>Activity wire</span><span id="wireCount">0 events</span></div>
+        <div class="wire-log" id="wireLog"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ VIEW 3: REPORT ============ -->
+  <section class="view" id="view-report">
+    <div class="top-actions">
+      <button class="btn-secondary" id="startOverBtn">Start a new review</button>
+    </div>
+    <div class="thumbnail-strip" id="reportThumbs"></div>
+
+    <div class="report-hero">
+      <div class="gauge-wrap">
+        <div id="mainGauge"></div>
+        <div class="gauge-label">Overall content score</div>
+      </div>
+      <div class="exec-summary">
+        <span class="eyebrow">Executive summary</span>
+        <p id="execSummaryText">—</p>
+      </div>
+    </div>
+
+    <div class="section-title"><span class="idx">01</span><h3>Content health report</h3><div class="rule"></div></div>
+    <div class="card health-card" id="healthReportText">—</div>
+
+    <div class="section-title"><span class="idx">02</span><h3>Specialist breakdown</h3><div class="rule"></div></div>
+    <div class="breakdown-list" id="breakdownList"></div>
+
+    <div class="section-title"><span class="idx">03</span><h3>Highest-impact improvements</h3><div class="rule"></div></div>
+    <div class="grid-2" id="topImprovements"></div>
+
+    <div class="section-title"><span class="idx">04</span><h3>Predicted performance potential</h3><div class="rule"></div></div>
+    <div class="predicted">
+      <div class="badge" id="predictedBadge">—</div>
+      <div>
+        <p id="predictedText">—</p>
+        <div class="note">AI estimate based on this review only — not a guarantee of real-world performance.</div>
+      </div>
+    </div>
+
+    <div class="section-title"><span class="idx">05</span><h3>Before vs. after</h3><div class="rule"></div></div>
+    <div class="ba-wrap">
+      <div class="ba-col ba-before"><span class="ba-label">Before</span><span id="baBefore">—</span></div>
+      <div class="ba-col ba-after"><span class="ba-label">After</span><span id="baAfter">—</span></div>
+    </div>
+
+    <div class="section-title"><span class="idx">06</span><h3>Full rewrite</h3><div class="rule"></div></div>
+    <div class="rewrite-box" id="rewriteText">—</div>
+    <button class="btn-secondary copy-btn" id="copyRewrite">Copy rewrite</button>
+
+    <div class="section-title"><span class="idx">07</span><h3>Alternative hooks</h3><div class="rule"></div></div>
+    <div class="chip-list" id="altHooks"></div>
+
+    <div class="section-title"><span class="idx">08</span><h3>Alternative titles</h3><div class="rule"></div></div>
+    <div class="chip-list" id="altTitles"></div>
+
+    <div class="section-title"><span class="idx">09</span><h3>Publishing checklist</h3><div class="rule"></div></div>
+    <div class="checklist" id="publishChecklist"></div>
+
+    <div class="section-title"><span class="idx">10</span><h3>Go deeper</h3><div class="rule"></div></div>
+    <div id="deeperPrompts"></div>
+
+    <div class="footer-note">
+      This report was generated live by Claude based on the material you submitted. Scores and predictions are AI-generated estimates meant to guide your judgment, not replace it — treat them as a second opinion from a sharp, fast editor, not ground truth.
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ CONFIG ============ */
+  var API_URL = "https://api.anthropic.com/v1/messages";
+  var MODEL = "claude-sonnet-4-6";
+
+  /* ============ STATE ============ */
+  var state = {
+    contentType: "Social media post/caption",
+    platform: "Instagram",
+    goal: "Grow engagement and reach",
+    intensity: "Balanced and constructive",
+    text: "",
+    images: [], // {name, mediaType, base64, dataUrl}
+    isAnalytics: false,
+    stages: [],       // planned reviewer stages [{name, role, focus}]
+    stageResults: [], // parsed results per stage
+    report: {}        // final merged synthesis fields
+  };
+
+  var intensityDescriptions = {
+    "Light and encouraging": "Warm and encouraging — leads with what's working, frames fixes gently.",
+    "Balanced and constructive": "Fair and constructive — calls out real weaknesses but frames feedback usefully.",
+    "Brutally honest and critical": "Rigorous and unsparing — will not soften weaknesses, tells you exactly what's holding this back."
+  };
+
+  /* ============ THEME ============ */
+  var themeToggle = document.getElementById("themeToggle");
+  themeToggle.addEventListener("click", function(){
+    var html = document.documentElement;
+    var current = html.getAttribute("data-theme");
+    var next = current === "dark" ? "light" : "dark";
+    html.setAttribute("data-theme", next);
+    document.body.setAttribute("data-theme", next);
+    themeToggle.textContent = next === "dark" ? "Light mode" : "Dark mode";
+  });
+
+  /* ============ NAV ============ */
+  function showView(id){
+    document.querySelectorAll(".view").forEach(function(v){ v.classList.toggle("active", v.id === id); });
+    document.querySelectorAll(".step").forEach(function(s){ s.classList.toggle("active", s.dataset.target === id); });
+  }
+  document.querySelectorAll(".step").forEach(function(s){
+    s.addEventListener("click", function(){
+      if (s.classList.contains("reached")) showView(s.dataset.target);
+    });
+  });
+  document.getElementById("backToIntake").addEventListener("click", function(){ showView("view-intake"); });
+  document.getElementById("startOverBtn").addEventListener("click", function(){ location.reload(); });
+
+  function markReached(id){
+    var stepEl = document.querySelector('.step[data-target="'+id+'"]');
+    if (stepEl) stepEl.classList.add("reached");
+  }
+  function markDone(id){
+    var stepEl = document.querySelector('.step[data-target="'+id+'"]');
+    if (stepEl) stepEl.classList.add("done");
+  }
+
+  /* ============ INTAKE: PILL GROUPS ============ */
+  function wirePillGroup(groupName, otherInputId, onChange){
+    var group = document.querySelector('.pills[data-group="'+groupName+'"]');
+    var otherInput = document.getElementById(otherInputId);
+    group.querySelectorAll(".pill").forEach(function(pill){
+      pill.addEventListener("click", function(){
+        group.querySelectorAll(".pill").forEach(function(p){ p.classList.remove("selected"); });
+        pill.classList.add("selected");
+        if (pill.dataset.value === "__other__"){
+          otherInput.classList.add("show");
+          otherInput.focus();
+          onChange(otherInput.value || "");
+        } else {
+          otherInput.classList.remove("show");
+          onChange(pill.dataset.value);
+        }
+      });
+    });
+    if (otherInput){
+      otherInput.addEventListener("input", function(){ onChange(otherInput.value); });
+    }
+  }
+  wirePillGroup("contentType", "contentTypeOther", function(v){ state.contentType = v; });
+  wirePillGroup("platform", "platformOther", function(v){ state.platform = v; });
+  wirePillGroup("goal", "goalOther", function(v){ state.goal = v; });
+  wirePillGroup("intensity", null, function(v){
+    state.intensity = v;
+    document.getElementById("intensityDesc").textContent = intensityDescriptions[v] || "";
+  });
+
+  /* ============ INTAKE: TEXT ============ */
+  var contentTextEl = document.getElementById("contentText");
+  var charCountEl = document.getElementById("charCount");
+  contentTextEl.addEventListener("input", function(){
+    state.text = contentTextEl.value;
+    charCountEl.textContent = state.text.length + " characters";
+    validateIntake();
+  });
+
+  document.getElementById("isAnalytics").addEventListener("change", function(e){
+    state.isAnalytics = e.target.checked;
+  });
+
+  /* ============ INTAKE: IMAGES ============ */
+  var dropzone = document.getElementById("dropzone");
+  var fileInput = document.getElementById("fileInput");
+  var thumbsEl = document.getElementById("thumbs");
+
+  document.getElementById("browseLink").addEventListener("click", function(){ fileInput.click(); });
+  dropzone.addEventListener("click", function(e){ if (e.target.id !== "fileInput" && e.target.id !== "browseLink") fileInput.click(); });
+  ["dragenter","dragover"].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.add("drag"); });
+  });
+  ["dragleave","drop"].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.remove("drag"); });
+  });
+  dropzone.addEventListener("drop", function(e){
+    handleFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener("change", function(){
+    handleFiles(fileInput.files);
+    fileInput.value = "";
+  });
+
+  function handleFiles(fileList){
+    Array.prototype.forEach.call(fileList, function(file){
+      if (!/^image\//.test(file.type)) return;
+      resizeAndEncode(file, function(result){
+        state.images.push(result);
+        renderThumbs();
+        validateIntake();
+      });
+    });
+  }
+
+  function resizeAndEncode(file, cb){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var maxDim = 1280;
+        var w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim){
+          if (w > h){ h = Math.round(h * (maxDim / w)); w = maxDim; }
+          else { w = Math.round(w * (maxDim / h)); h = maxDim; }
+        }
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        var dataUrl = canvas.toDataURL("image/jpeg", 0.86);
+        var base64 = dataUrl.split(",")[1];
+        cb({ name: file.name, mediaType: "image/jpeg", base64: base64, dataUrl: dataUrl });
+      };
+      img.onerror = function(){ /* skip unreadable image */ };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function renderThumbs(){
+    thumbsEl.innerHTML = "";
+    state.images.forEach(function(img, idx){
+      var div = document.createElement("div");
+      div.className = "thumb";
+      div.innerHTML = '<img src="'+img.dataUrl+'" alt="'+escapeHtml(img.name)+'"><button class="rm" data-idx="'+idx+'">✕</button>';
+      thumbsEl.appendChild(div);
+    });
+    thumbsEl.querySelectorAll(".rm").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        state.images.splice(parseInt(btn.dataset.idx, 10), 1);
+        renderThumbs();
+        validateIntake();
+      });
+    });
+  }
+
+  /* ============ VALIDATION ============ */
+  var submitBtn = document.getElementById("submitBtn");
+  var validationMsg = document.getElementById("validationMsg");
+  function validateIntake(){
+    var ok = (state.text && state.text.trim().length > 0) || state.images.length > 0;
+    submitBtn.disabled = !ok;
+    validationMsg.style.display = ok ? "none" : "inline";
+  }
+  validateIntake();
+
+  /* ============ UTILS ============ */
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c];
+    });
+  }
+  function sleep(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+  function nowStamp(){
+    var d = new Date();
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  }
+
+  /* ============ GENERIC PLAIN-TEXT PARSER ============ */
+  function parseFields(text, keys){
+    var result = {};
+    var lines = String(text || "").split(/\r?\n/);
+    var keyPattern = new RegExp("^(" + keys.join("|") + ")\\s*:\\s*(.*)$");
+    var currentKey = null, buffer = [];
+    function flush(){ if (currentKey) result[currentKey] = buffer.join("\n").trim(); }
+    for (var i = 0; i < lines.length; i++){
+      var m = lines[i].match(keyPattern);
+      if (m){
+        flush();
+        currentKey = m[1];
+        buffer = m[2] ? [m[2]] : [];
+      } else if (currentKey){
+        buffer.push(lines[i]);
+      }
+    }
+    flush();
+    return result;
+  }
+  function toList(str){
+    if (!str) return [];
+    return String(str).split(/\r?\n/)
+      .map(function(l){ return l.replace(/^[\-\*\u2022]\s*/, "").trim(); })
+      .filter(Boolean);
+  }
+  function toInt(str, fallback){
+    var n = parseInt(String(str || "").replace(/[^0-9\-]/g, ""), 10);
+    return isNaN(n) ? fallback : Math.max(0, Math.min(100, n));
+  }
+  function parseStages(text){
+    var chunks = String(text || "").split(/\n(?=\s*STAGE\s*:)/i);
+    var stages = [];
+    chunks.forEach(function(chunk){
+      chunk = chunk.trim();
+      if (!/^STAGE\s*:/i.test(chunk)) return;
+      var f = parseFields(chunk, ["STAGE","ROLE","FOCUS"]);
+      if (f.STAGE) stages.push({ name: f.STAGE.trim(), role: (f.ROLE||"").trim(), focus: (f.FOCUS||"").trim() });
+    });
+    return stages;
+  }
+
+  /* ============ API CALL WITH RETRY ============ */
+  function callClaude(system, userContent, opts){
+    opts = opts || {};
+    var retries = opts.retries != null ? opts.retries : 2;
+    var attempt = 0;
+    function tryOnce(){
+      return fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 1000,
+          system: system,
+          messages: [{ role: "user", content: userContent }]
+        })
+      }).then(function(res){
+        if (!res.ok){
+          return res.text().then(function(t){
+            throw new Error("API error " + res.status + ": " + t.slice(0,200));
+          });
+        }
+        return res.json();
+      }).then(function(data){
+        var blocks = data && data.content ? data.content : [];
+        var text = blocks.filter(function(b){ return b.type === "text"; }).map(function(b){ return b.text; }).join("\n");
+        if (!text || !text.trim()) throw new Error("Empty response from model");
+        return text;
+      }).catch(function(err){
+        if (attempt < retries){
+          attempt++;
+          return sleep(500 * Math.pow(2, attempt)).then(tryOnce);
+        }
+        throw err;
+      });
+    }
+    return tryOnce();
+  }
+
+  function buildUserContent(textParts, images){
+    var content = [];
+    if (textParts) content.push({ type: "text", text: textParts });
+    images.forEach(function(img){
+      content.push({ type: "image", source: { type: "base64", media_type: img.mediaType, data: img.base64 } });
+    });
+    return content;
+  }
+
+  /* ============ WIRE LOG ============ */
+  var wireLogEl = document.getElementById("wireLog");
+  var wireCountEl = document.getElementById("wireCount");
+  var wireEvents = 0;
+  function logWire(msg, cls){
+    wireEvents++;
+    wireCountEl.textContent = wireEvents + " event" + (wireEvents === 1 ? "" : "s");
+    var line = document.createElement("div");
+    line.className = "wire-line" + (cls ? " " + cls : "");
+    line.innerHTML = '<span class="ts">' + nowStamp() + '</span>' + escapeHtml(msg);
+    wireLogEl.appendChild(line);
+    wireLogEl.scrollTop = wireLogEl.scrollHeight;
+  }
+
+  function setProgress(pct){
+    document.getElementById("progressFill").style.width = pct + "%";
+  }
+
+  /* ============ SUBMIT → PIPELINE ============ */
+  submitBtn.addEventListener("click", function(){
+    markReached("view-pipeline");
+    showView("view-pipeline");
+    resetPipelineUI();
+    runPipeline();
+  });
+
+  function resetPipelineUI(){
+    wireLogEl.innerHTML = "";
+    wireEvents = 0;
+    wireCountEl.textContent = "0 events";
+    document.getElementById("stations").innerHTML = '<div class="station skeleton" style="height:70px;"></div><div class="station skeleton" style="height:70px;"></div><div class="station skeleton" style="height:70px;"></div>';
+    document.getElementById("pipelineError").innerHTML = "";
+    document.getElementById("pipelineSub").textContent = "Assembling a specialist panel for your content...";
+    setProgress(4);
+  }
+
+  function contentBriefText(){
+    return "CONTENT TYPE: " + state.contentType + "\n" +
+      "PLATFORM: " + state.platform + "\n" +
+      "CREATOR GOAL: " + state.goal + "\n" +
+      "REVIEW INTENSITY: " + state.intensity + "\n" +
+      (state.isAnalytics ? "NOTE: One or more attached images is analytics/performance data — factor real numbers into the review where visible.\n" : "") +
+      "---\n" +
+      "CONTENT TEXT:\n" + (state.text && state.text.trim() ? state.text.trim() : "(No text provided — evaluate the attached image(s) directly.)");
+  }
+
+  function runPipeline(){
+    logWire("Opening submission — " + state.contentType + " for " + state.platform + ".");
+    var plannerSystem = "You are the Chief Content Strategist at a top-tier content consultancy. Given details about a piece of content, design a custom multi-stage review pipeline of 3 to 5 specialist reviewers best suited to evaluate THIS specific content, platform, and goal. Each reviewer must have a distinct, non-overlapping lens chosen from what's actually relevant (for example: hook and retention strength, platform/algorithm fit, visual or thumbnail impact, copywriting and persuasion, storytelling and structure, SEO and discoverability, brand voice and tone, accessibility and clarity, or call-to-action and conversion design) — never force a fixed template, pick only what matters for this content.\n\nOutput ONLY plain text in exactly this repeating three-line format, nothing else, no markdown, no numbering, no JSON, no preamble or closing remarks:\n\nSTAGE: <reviewer title, 2-5 words>\nROLE: <a full production-quality system prompt for this reviewer describing their expertise, evaluation lens, and tone, 2-4 sentences>\nFOCUS: <one short line on what they specifically check>\n\nLeave one blank line between reviewer blocks. Choose between 3 and 5 reviewers total, exactly matched to this content.";
+
+    logWire("Briefing the Chief Strategist on your submission...");
+    callClaude(plannerSystem, buildUserContent(contentBriefText(), state.images))
+      .then(function(text){
+        var stages = parseStages(text);
+        if (!stages.length) throw new Error("Could not assemble a review panel from the response.");
+        state.stages = stages;
+        state.stageResults = stages.map(function(){ return null; });
+        logWire("Review panel assembled — " + stages.length + " specialists.", "ok");
+        document.getElementById("pipelineSub").textContent = stages.length + " specialists will review this " + state.contentType.toLowerCase() + ".";
+        renderStations(stages);
+        setProgress(12);
+        return runStagesSequentially(0);
+      })
+      .then(function(){
+        logWire("All specialist reviews complete. Compiling executive report...", "ok");
+        setProgress(70);
+        return runSynthesis();
+      })
+      .then(function(){
+        setProgress(100);
+        logWire("Executive report ready.", "ok");
+        markReached("view-report");
+        markDone("view-pipeline");
+        renderReport();
+        setTimeout(function(){ showView("view-report"); }, 500);
+      })
+      .catch(function(err){
+        showPipelineError(err.message || String(err));
+      });
+  }
+
+  function showPipelineError(msg){
+    var el = document.getElementById("pipelineError");
+    el.innerHTML = '<div class="error-banner"><span>The review desk hit a snag: ' + escapeHtml(msg) + '</span><button id="retryPipeline">Retry</button></div>';
+    document.getElementById("retryPipeline").addEventListener("click", function(){
+      resetPipelineUI();
+      runPipeline();
+    });
+  }
+
+  /* ============ STATIONS RENDER ============ */
+  function renderStations(stages){
+    var wrap = document.getElementById("stations");
+    wrap.innerHTML = "";
+    stages.forEach(function(stage, i){
+      var el = document.createElement("div");
+      el.className = "station";
+      el.id = "station-" + i;
+      el.innerHTML =
+        '<div class="station-top" data-idx="' + i + '">' +
+          '<div class="station-id">' +
+            '<div class="station-dot" id="dot-' + i + '">' + (i+1) + '</div>' +
+            '<div><div class="station-name">' + escapeHtml(stage.name) + '</div><div class="station-focus">' + escapeHtml(stage.focus) + '</div></div>' +
+          '</div>' +
+          '<div class="station-score">' +
+            '<span class="station-status-text" id="status-' + i + '">Queued</span>' +
+            '<span class="score-badge" id="score-' + i + '"></span>' +
+            '<span class="caret">›</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="station-detail" id="detail-' + i + '"><div class="station-detail-inner" id="detail-inner-' + i + '"></div></div>';
+      wrap.appendChild(el);
+      el.querySelector(".station-top").addEventListener("click", function(){
+        el.classList.toggle("open");
+      });
+    });
+  }
+
+  function runStagesSequentially(i){
+    if (i >= state.stages.length) return Promise.resolve();
+    var stage = state.stages[i];
+    var stationEl = document.getElementById("station-" + i);
+    stationEl.classList.add("active");
+    document.getElementById("status-" + i).textContent = "Reviewing...";
+    logWire(stage.name + " has started reviewing.");
+
+    var intensityNote = "\n\nReview intensity requested: " + state.intensity + " — " + intensityDescriptions[state.intensity];
+    var system = stage.role + intensityNote + "\n\nAlways respond in the exact plain-text field format requested, never markdown and never JSON.";
+    var userText = contentBriefText() + "\n---\nEvaluate this content strictly from your specialist lens described above. Respond in EXACTLY this plain text format, nothing else:\n\nSCORE: <integer 0-100>\nVERDICT: <one punchy sentence>\nSTRENGTHS:\n- <specific strength>\n- <specific strength>\nWEAKNESSES:\n- <specific weakness>\n- <specific weakness>\nOPPORTUNITIES:\n- <a missed opportunity>\nRECOMMENDATIONS:\n- <specific, actionable recommendation>\n- <specific, actionable recommendation>\nREASONING: <2-4 sentences explaining the score, grounded in what you actually saw>";
+
+    return callClaude(system, buildUserContent(userText, state.images))
+      .then(function(text){
+        var fields = parseFields(text, ["SCORE","VERDICT","STRENGTHS","WEAKNESSES","OPPORTUNITIES","RECOMMENDATIONS","REASONING"]);
+        var parsed = {
+          score: toInt(fields.SCORE, null),
+          verdict: fields.VERDICT || "",
+          strengths: toList(fields.STRENGTHS),
+          weaknesses: toList(fields.WEAKNESSES),
+          opportunities: toList(fields.OPPORTUNITIES),
+          recommendations: toList(fields.RECOMMENDATIONS),
+          reasoning: fields.REASONING || ""
+        };
+        state.stageResults[i] = parsed;
+        stationEl.classList.remove("active");
+        stationEl.classList.add("done");
+        document.getElementById("dot-" + i).textContent = "✓";
+        document.getElementById("status-" + i).textContent = "Complete";
+        document.getElementById("score-" + i).textContent = parsed.score != null ? parsed.score : "—";
+        document.getElementById("detail-inner-" + i).innerHTML = renderStageDetailHtml(parsed);
+        logWire(stage.name + " finished — score " + (parsed.score != null ? parsed.score : "n/a") + ".", "ok");
+        setProgress(12 + Math.round(((i+1) / state.stages.length) * 55));
+        return runStagesSequentially(i + 1);
+      })
+      .catch(function(err){
+        stationEl.classList.remove("active");
+        stationEl.classList.add("error");
+        document.getElementById("status-" + i).textContent = "Failed";
+        document.getElementById("dot-" + i).textContent = "!";
+        document.getElementById("detail-inner-" + i).innerHTML = '<p>This reviewer could not complete its pass: ' + escapeHtml(err.message || String(err)) + '</p><button class="retry-btn" id="retry-stage-' + i + '">Retry this reviewer</button>';
+        stationEl.classList.add("open");
+        logWire(stage.name + " failed: " + (err.message || String(err)), "err");
+        var retryBtn = document.getElementById("retry-stage-" + i);
+        return new Promise(function(resolve){
+          retryBtn.addEventListener("click", function(){
+            stationEl.classList.remove("error");
+            resolve(runStagesSequentially(i));
+          });
+          // Also allow the overall flow to continue if the user prefers to skip — but per spec, we wait for retry.
+        });
+      });
+  }
+
+  function renderStageDetailHtml(p){
+    function ul(items){ return items.length ? ("<ul>" + items.map(function(s){ return "<li>" + escapeHtml(s) + "</li>"; }).join("") + "</ul>") : "<p>None noted.</p>"; }
+    var html = "";
+    if (p.verdict) html += "<p><strong>" + escapeHtml(p.verdict) + "</strong></p>";
+    html += "<h5>Strengths</h5>" + ul(p.strengths);
+    html += "<h5>Weaknesses</h5>" + ul(p.weaknesses);
+    html += "<h5>Missed opportunities</h5>" + ul(p.opportunities);
+    html += "<h5>Recommendations</h5>" + ul(p.recommendations);
+    if (p.reasoning) html += "<h5>Reasoning</h5><p>" + escapeHtml(p.reasoning) + "</p>";
+    return html;
+  }
+
+  /* ============ SYNTHESIS ============ */
+  function compiledReviewsText(){
+    var out = "";
+    state.stages.forEach(function(stage, i){
+      var r = state.stageResults[i];
+      if (!r) return;
+      out += "### " + stage.name + " (score: " + (r.score != null ? r.score : "n/a") + ")\n";
+      out += "Verdict: " + r.verdict + "\n";
+      out += "Strengths: " + r.strengths.join("; ") + "\n";
+      out += "Weaknesses: " + r.weaknesses.join("; ") + "\n";
+      out += "Opportunities: " + r.opportunities.join("; ") + "\n";
+      out += "Recommendations: " + r.recommendations.join("; ") + "\n";
+      out += "Reasoning: " + r.reasoning + "\n\n";
+    });
+    return out;
+  }
+
+  function runSynthesis(){
+    var baseBrief = contentBriefText() + "\n---\nSPECIALIST REVIEWS:\n" + compiledReviewsText();
+
+    logWire("Editor-in-Chief is compiling the executive summary...");
+    var sysA = "You are the Editor-in-Chief synthesizing specialist reviews into an executive-level content health report. Be concise, concrete, and specific to this exact content — never generic filler.";
+    var userA = baseBrief + "\n---\nRespond in EXACTLY this plain text format, nothing else:\n\nOVERALL_SCORE: <integer 0-100, your own holistic judgment, not simply the average>\nEXECUTIVE_SUMMARY: <3-4 sentences, specific to this content>\nHEALTH_REPORT: <a short paragraph on overall content health covering hook, structure, platform fit, and conversion potential>\nTOP_IMPROVEMENTS:\n- <highest impact fix, specific>\n- <second highest impact fix>\n- <third>\nPREDICTED_LABEL: <one of: Low, Moderate, High, Very High>\nPREDICTED_TEXT: <one sentence on why, explicitly framed as a directional AI estimate, not a guarantee>";
+
+    return callClaude(sysA, buildUserContent(userA, []))
+      .then(function(text){
+        var f = parseFields(text, ["OVERALL_SCORE","EXECUTIVE_SUMMARY","HEALTH_REPORT","TOP_IMPROVEMENTS","PREDICTED_LABEL","PREDICTED_TEXT"]);
+        state.report.overallScore = toInt(f.OVERALL_SCORE, null);
+        state.report.executiveSummary = f.EXECUTIVE_SUMMARY || "";
+        state.report.healthReport = f.HEALTH_REPORT || "";
+        state.report.topImprovements = toList(f.TOP_IMPROVEMENTS);
+        state.report.predictedLabel = f.PREDICTED_LABEL || "";
+        state.report.predictedText = f.PREDICTED_TEXT || "";
+        logWire("Executive summary drafted.", "ok");
+        setProgress(80);
+
+        logWire("Senior copywriter is drafting the rewrite and creative alternatives...");
+        var sysB = "You are a senior copywriter and creative director producing publish-ready rewritten content and creative alternatives, grounded directly in the specialist reviews already completed.";
+        var userB = baseBrief + "\n---\nRespond in EXACTLY this plain text format, nothing else:\n\nBEFORE: <a short excerpt or summary of the original opening, 1-2 sentences>\nAFTER: <the improved equivalent opening, 1-2 sentences>\nREWRITE: <a full polished, publish-ready rewritten version of the content, appropriately sized for the platform>\nALT_HOOKS:\n- <alternative hook 1>\n- <alternative hook 2>\n- <alternative hook 3>\nALT_TITLES:\n- <alternative title 1>\n- <alternative title 2>\n- <alternative title 3>";
+        return callClaude(sysB, buildUserContent(userB, state.images));
+      })
+      .then(function(text){
+        var f = parseFields(text, ["BEFORE","AFTER","REWRITE","ALT_HOOKS","ALT_TITLES"]);
+        state.report.before = f.BEFORE || "";
+        state.report.after = f.AFTER || "";
+        state.report.rewrite = f.REWRITE || "";
+        state.report.altHooks = toList(f.ALT_HOOKS);
+        state.report.altTitles = toList(f.ALT_TITLES);
+        logWire("Rewrite and creative alternatives ready.", "ok");
+        setProgress(90);
+
+        logWire("Publishing ops is finalizing the checklist and next prompts...");
+        var sysC = "You are a meticulous publishing operations lead who prepares content for a final go-live check, and a prompt-engineering coach who suggests smart follow-up questions the creator could ask an AI assistant to refine this further.";
+        var userC = baseBrief + "\n---\nRespond in EXACTLY this plain text format, nothing else:\n\nPUBLISHING_CHECKLIST:\n- <specific pre-publish action item>\n- <item>\n- <item>\n- <item>\n- <item>\nDEEPER_PROMPTS:\n- <a follow-up prompt the user could type to an AI assistant to go deeper, phrased in first person as something they'd actually send>\n- <prompt>\n- <prompt>";
+        return callClaude(sysC, buildUserContent(userC, []));
+      })
+      .then(function(text){
+        var f = parseFields(text, ["PUBLISHING_CHECKLIST","DEEPER_PROMPTS"]);
+        state.report.checklist = toList(f.PUBLISHING_CHECKLIST);
+        state.report.deeperPrompts = toList(f.DEEPER_PROMPTS);
+        logWire("Publishing checklist and next-step prompts ready.", "ok");
+      });
+  }
+
+  /* ============ GAUGE ============ */
+  function renderGauge(container, score){
+    var s = score == null ? 0 : score;
+    var angle = (s / 100) * 180; // 0..180
+    var r = 80, cx = 100, cy = 100;
+    var circumference = Math.PI * r;
+    var offset = circumference * (1 - s / 100);
+    var needleAngle = angle - 90;
+    var color = s >= 75 ? "var(--ok)" : (s >= 45 ? "var(--brass)" : "var(--alert)");
+    container.innerHTML =
+      '<svg width="220" height="130" viewBox="0 0 200 115">' +
+        '<path d="M20,100 A80,80 0 0 1 180,100" fill="none" stroke="var(--track)" stroke-width="14" stroke-linecap="round"/>' +
+        '<path d="M20,100 A80,80 0 0 1 180,100" fill="none" stroke="' + color + '" stroke-width="14" stroke-linecap="round" ' +
+          'stroke-dasharray="' + circumference.toFixed(1) + '" stroke-dashoffset="' + circumference.toFixed(1) + '" ' +
+          'style="transition:stroke-dashoffset 1.2s ease;" id="gaugeArc"/>' +
+        '<line x1="' + cx + '" y1="' + cy + '" x2="' + cx + '" y2="' + (cy - 62) + '" stroke="' + color + '" stroke-width="3" stroke-linecap="round" ' +
+          'transform="rotate(' + needleAngle + ' ' + cx + ' ' + cy + ')" style="transition:transform 1.2s cubic-bezier(.2,.9,.3,1.2);" id="gaugeNeedle"/>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="' + color + '"/>' +
+        '<text x="100" y="98" text-anchor="middle" font-size="30" font-weight="700" fill="var(--text)" font-family="ui-monospace,monospace">' + (score != null ? score : "—") + '</text>' +
+      '</svg>';
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        var arc = document.getElementById("gaugeArc");
+        if (arc) arc.style.strokeDashoffset = offset.toFixed(1);
+      });
+    });
+  }
+
+  /* ============ REPORT RENDER ============ */
+  function renderReport(){
+    var r = state.report;
+
+    var thumbStrip = document.getElementById("reportThumbs");
+    thumbStrip.innerHTML = "";
+    state.images.forEach(function(img){
+      var el = document.createElement("img");
+      el.src = img.dataUrl;
+      thumbStrip.appendChild(el);
+    });
+
+    renderGauge(document.getElementById("mainGauge"), r.overallScore);
+    document.getElementById("execSummaryText").textContent = r.executiveSummary || "No summary returned.";
+    document.getElementById("healthReportText").textContent = r.healthReport || "No health report returned.";
+
+    var breakdownList = document.getElementById("breakdownList");
+    breakdownList.innerHTML = "";
+    state.stages.forEach(function(stage, i){
+      var res = state.stageResults[i];
+      if (!res) return;
+      var row = document.createElement("div");
+      row.className = "breakdown-row";
+      row.innerHTML =
+        '<div class="breakdown-top">' +
+          '<div class="bname">' + escapeHtml(stage.name) + '</div>' +
+          '<div class="breakdown-bar-track"><div class="breakdown-bar-fill" style="width:0%" data-score="' + (res.score||0) + '"></div></div>' +
+          '<div class="breakdown-score">' + (res.score != null ? res.score : "—") + '</div>' +
+        '</div>' +
+        '<div class="breakdown-detail"><div class="breakdown-detail-inner">' + renderStageDetailHtml(res) + '</div></div>';
+      row.querySelector(".breakdown-top").addEventListener("click", function(){ row.classList.toggle("open"); });
+      breakdownList.appendChild(row);
+    });
+    setTimeout(function(){
+      breakdownList.querySelectorAll(".breakdown-bar-fill").forEach(function(bar){
+        bar.style.width = bar.dataset.score + "%";
+      });
+    }, 100);
+
+    var topImp = document.getElementById("topImprovements");
+    topImp.innerHTML = "";
+    (r.topImprovements || []).forEach(function(item, i){
+      var div = document.createElement("div");
+      div.className = "impact-card";
+      div.innerHTML = "<b>" + (i+1) + ".</b> " + escapeHtml(item);
+      topImp.appendChild(div);
+    });
+
+    document.getElementById("predictedBadge").textContent = r.predictedLabel || "—";
+    document.getElementById("predictedText").textContent = r.predictedText || "";
+
+    document.getElementById("baBefore").textContent = r.before || "—";
+    document.getElementById("baAfter").textContent = r.after || "—";
+    document.getElementById("rewriteText").textContent = r.rewrite || "—";
+
+    var hooksEl = document.getElementById("altHooks");
+    hooksEl.innerHTML = "";
+    (r.altHooks || []).forEach(function(h){
+      var div = document.createElement("div");
+      div.className = "chip-item";
+      div.innerHTML = "<span>" + escapeHtml(h) + "</span><button>Copy</button>";
+      div.querySelector("button").addEventListener("click", function(){ copyText(h, div.querySelector("button")); });
+      hooksEl.appendChild(div);
+    });
+
+    var titlesEl = document.getElementById("altTitles");
+    titlesEl.innerHTML = "";
+    (r.altTitles || []).forEach(function(t){
+      var div = document.createElement("div");
+      div.className = "chip-item";
+      div.innerHTML = "<span>" + escapeHtml(t) + "</span><button>Copy</button>";
+      div.querySelector("button").addEventListener("click", function(){ copyText(t, div.querySelector("button")); });
+      titlesEl.appendChild(div);
+    });
+
+    var checklistEl = document.getElementById("publishChecklist");
+    checklistEl.innerHTML = "";
+    (r.checklist || []).forEach(function(item){
+      var div = document.createElement("div");
+      div.className = "check-item";
+      div.innerHTML = '<span class="check-box">✓</span><span class="check-text">' + escapeHtml(item) + '</span>';
+      div.addEventListener("click", function(){ div.classList.toggle("checked"); });
+      checklistEl.appendChild(div);
+    });
+
+    var promptsEl = document.getElementById("deeperPrompts");
+    promptsEl.innerHTML = "";
+    (r.deeperPrompts || []).forEach(function(p){
+      var div = document.createElement("div");
+      div.className = "prompt-chip";
+      div.innerHTML = '<span class="txt">"' + escapeHtml(p) + '"</span><button class="btn-secondary" style="font-size:11px;padding:6px 11px;">Copy</button>';
+      div.querySelector("button").addEventListener("click", function(){ copyText(p, div.querySelector("button")); });
+      promptsEl.appendChild(div);
+    });
+
+    document.getElementById("copyRewrite").addEventListener("click", function(){
+      copyText(r.rewrite || "", document.getElementById("copyRewrite"));
+    });
+  }
+
+  function copyText(text, btn){
+    var original = btn.textContent;
+    function done(ok){
+      btn.textContent = ok ? "Copied" : "Copy failed";
+      setTimeout(function(){ btn.textContent = original; }, 1400);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){ done(true); }, function(){ done(false); });
+    } else {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+        done(true);
+      } catch(e){ done(false); }
+    }
+  }
+
+})();
+</script>
+</body>
+</html>
