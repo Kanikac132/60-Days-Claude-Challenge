@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Relocation Ledger — Austin, Denver, Raleigh &amp; Portland Compared</title>
+<style>
+  :root{
+    --ink:#1B2A3D;
+    --ink-soft:#5B6B7A;
+    --paper:#EFE8D8;
+    --paper-dark:#E3DAC4;
+    --card:#F7F3E8;
+    --teal:#3E6259;
+    --teal-dim:#557569;
+    --clay:#B5563B;
+    --gold:#B8892B;
+    --line:#C9BFA4;
+    --line-soft:#DAD2BB;
+    --shadow: 0 1px 0 rgba(27,42,61,0.06);
+    --serif: "Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono: "SF Mono","JetBrains Mono","Consolas","Menlo",monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{color:var(--teal);}
+  a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible{
+    outline:2px solid var(--clay);
+    outline-offset:2px;
+  }
+
+  .wrap{
+    max-width:1080px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+
+  /* ===== Header ===== */
+  header.masthead{
+    border-bottom:1px solid var(--line);
+    padding:40px 0 28px;
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--teal);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:22px;
+    height:1px;
+    background:var(--teal);
+    display:inline-block;
+  }
+  h1.title{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:clamp(32px,5vw,52px);
+    line-height:1.05;
+    margin:0 0 14px;
+    letter-spacing:-0.01em;
+  }
+  .dek{
+    font-size:17px;
+    color:var(--ink-soft);
+    max-width:640px;
+    margin:0;
+  }
+  .dek strong{color:var(--ink);}
+
+  /* ===== Sections generic ===== */
+  section{padding:44px 0;}
+  section + section{border-top:1px solid var(--line-soft);}
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:16px;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+  }
+  h2.section-title{
+    font-family:var(--serif);
+    font-size:24px;
+    font-weight:600;
+    margin:0;
+  }
+  .section-note{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+
+  /* ===== Leaderboard (signature element) ===== */
+  .board{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:3px;
+    box-shadow:var(--shadow);
+    padding:8px 22px 22px;
+  }
+  .board-row{
+    display:grid;
+    grid-template-columns:34px 148px 1fr 76px;
+    align-items:center;
+    gap:16px;
+    padding:16px 0;
+    border-bottom:1px dashed var(--line-soft);
+    transition:transform .5s cubic-bezier(.2,.7,.3,1);
+  }
+  .board-row:last-child{border-bottom:none;}
+  .rank-num{
+    font-family:var(--mono);
+    font-size:20px;
+    color:var(--ink-soft);
+    text-align:right;
+  }
+  .board-row.rank-1 .rank-num{color:var(--gold); font-weight:700;}
+  .city-label{
+    font-family:var(--serif);
+    font-size:19px;
+    font-weight:600;
+  }
+  .city-sub{
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-soft);
+    font-weight:400;
+    margin-top:2px;
+  }
+  .bar-track{
+    position:relative;
+    height:14px;
+    background:var(--paper-dark);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    position:absolute;
+    inset:0 auto 0 0;
+    background:linear-gradient(90deg, var(--teal-dim), var(--teal));
+    border-radius:2px;
+    transition:width .55s cubic-bezier(.2,.7,.3,1);
+  }
+  .board-row.rank-1 .bar-fill{background:linear-gradient(90deg, var(--gold), #CBA24A);}
+  .score-num{
+    font-family:var(--mono);
+    font-size:16px;
+    text-align:right;
+    font-weight:600;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .board-row, .bar-fill{transition:none;}
+  }
+
+  /* ===== Instrument panel (weights) ===== */
+  .panel{
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:3px;
+    padding:26px 26px 8px;
+  }
+  .panel p.hint{
+    font-size:13px;
+    color:#B9C3CC;
+    margin:0 0 20px;
+    font-family:var(--sans);
+  }
+  .dial-row{
+    display:grid;
+    grid-template-columns:180px 1fr 64px;
+    align-items:center;
+    gap:16px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+  }
+  .dial-row:last-of-type{border-bottom:none;}
+  .dial-label{
+    font-family:var(--mono);
+    font-size:13px;
+    letter-spacing:.02em;
+  }
+  .dial-label .direction{
+    display:block;
+    font-size:10px;
+    color:#8CA0A0;
+    margin-top:2px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+  input[type="range"]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:4px;
+    background:rgba(255,255,255,0.22);
+    border-radius:2px;
+    outline-offset:6px;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--gold);
+    border:2px solid var(--paper);
+    cursor:pointer;
+    margin-top:-1px;
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:16px;height:16px;
+    border-radius:50%;
+    background:var(--gold);
+    border:2px solid var(--paper);
+    cursor:pointer;
+  }
+  .dial-val{
+    font-family:var(--mono);
+    font-size:14px;
+    text-align:right;
+    color:var(--gold);
+  }
+  .panel-actions{
+    display:flex;
+    justify-content:flex-end;
+    padding:16px 0 12px;
+  }
+  .reset-btn{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.35);
+    color:var(--paper);
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.04em;
+    padding:8px 14px;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  .reset-btn:hover{border-color:var(--gold); color:var(--gold);}
+
+  /* ===== Criteria detail cards ===== */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:16px;
+  }
+  @media (max-width:720px){ .grid{grid-template-columns:1fr;} }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:20px 22px;
+  }
+  .card h3{
+    font-family:var(--serif);
+    font-size:19px;
+    margin:0 0 12px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+  }
+  .card h3 .card-rank{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-soft);
+    font-weight:400;
+  }
+  dl.data-list{margin:0;}
+  .data-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:7px 0;
+    border-bottom:1px dashed var(--line-soft);
+    gap:12px;
+  }
+  .data-item:last-child{border-bottom:none;}
+  .data-item dt{
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .data-item dd{
+    margin:0;
+    font-family:var(--mono);
+    font-size:13px;
+    text-align:right;
+    white-space:nowrap;
+  }
+  .flag{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--clay);
+    border:1px solid var(--clay);
+    border-radius:2px;
+    padding:1px 4px;
+    margin-left:6px;
+    vertical-align:1px;
+  }
+  .flag.stable{color:var(--teal); border-color:var(--teal);}
+
+  /* ===== Collapsible panels ===== */
+  details.disclosure{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:3px;
+    margin-bottom:14px;
+  }
+  details.disclosure > summary{
+    list-style:none;
+    cursor:pointer;
+    padding:18px 22px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-family:var(--serif);
+    font-size:18px;
+    font-weight:600;
+  }
+  details.disclosure > summary::-webkit-details-marker{display:none;}
+  details.disclosure > summary::after{
+    content:"+";
+    font-family:var(--mono);
+    font-size:20px;
+    color:var(--teal);
+    transition:transform .2s ease;
+  }
+  details.disclosure[open] > summary::after{transform:rotate(45deg);}
+  .disclosure-body{
+    padding:0 22px 22px;
+    font-size:14.5px;
+    color:var(--ink-soft);
+  }
+  .disclosure-body p{margin:0 0 12px;}
+  .disclosure-body p:last-child{margin-bottom:0;}
+  .disclosure-body h4{
+    font-family:var(--sans);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--ink);
+    margin:18px 0 8px;
+  }
+  .disclosure-body h4:first-child{margin-top:0;}
+
+  .source-list{
+    list-style:none;
+    margin:0;
+    padding:0;
+  }
+  .source-list li{
+    padding:10px 0;
+    border-bottom:1px dashed var(--line-soft);
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .source-list li:last-child{border-bottom:none;}
+  .source-name{font-weight:600; color:var(--ink);}
+  .source-used{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--ink-soft);
+  }
+
+  /* ===== Footer / disclaimer ===== */
+  footer{
+    padding:32px 0 60px;
+    border-top:1px solid var(--line-soft);
+  }
+  .disclaimer{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    max-width:720px;
+    line-height:1.6;
+  }
+  .disclaimer strong{color:var(--ink);}
+
+  /* ===== States ===== */
+  .empty-state{
+    text-align:center;
+    padding:40px 20px;
+    color:var(--ink-soft);
+    font-family:var(--mono);
+    font-size:13px;
+  }
+  .skeleton-row{
+    height:52px;
+    background:linear-gradient(90deg, var(--paper-dark) 25%, var(--card) 50%, var(--paper-dark) 75%);
+    background-size:200% 100%;
+    animation:shimmer 1.4s infinite;
+    border-radius:3px;
+    margin-bottom:10px;
+  }
+  @keyframes shimmer{
+    0%{background-position:200% 0;}
+    100%{background-position:-200% 0;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .skeleton-row{animation:none;}
+  }
+
+  @media (max-width:640px){
+    .board-row{grid-template-columns:24px 1fr 64px; row-gap:8px;}
+    .city-label{font-size:16px;}
+    .bar-track{grid-column:1 / -1; order:3;}
+    .board-row{grid-template-areas:"rank city score" "bar bar bar";}
+    .rank-num{grid-area:rank;}
+    .city-label{grid-area:city;}
+    .score-num{grid-area:score;}
+    .bar-track{grid-area:bar;}
+    .dial-row{grid-template-columns:1fr; row-gap:6px;}
+    .dial-val{text-align:left;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Relocation survey · four cities</div>
+    <h1 class="title">The Relocation Ledger</h1>
+    <p class="dek">For a remote worker weighing where to live next. Four candidate cities, five measured criteria, and a live-adjustable ranking so <strong>you</strong> decide what matters — not a fixed formula.</p>
+  </header>
+
+  <section id="leaderboard-section">
+    <div class="section-head">
+      <h2 class="section-title">Current ranking</h2>
+      <span class="section-note" id="weight-sum-note">weights sum to 100</span>
+    </div>
+    <div class="board" id="board" aria-live="polite">
+      <!-- rows injected by JS -->
+    </div>
+  </section>
+
+  <section id="weights-section">
+    <div class="section-head">
+      <h2 class="section-title">Set your priorities</h2>
+      <span class="section-note">drag to reweight · ranking updates live</span>
+    </div>
+    <div class="panel">
+      <p class="hint">Each slider controls how much a criterion counts toward the score. Push cost of living to 100 and the cheapest city rises; push climate to 100 and sunshine takes over.</p>
+      <div id="dial-list"><!-- injected --></div>
+      <div class="panel-actions">
+        <button class="reset-btn" id="reset-weights" type="button">Reset to equal weights</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="detail-section">
+    <div class="section-head">
+      <h2 class="section-title">The raw numbers</h2>
+      <span class="section-note">per city, per criterion</span>
+    </div>
+    <div class="grid" id="detail-grid"><!-- injected --></div>
+  </section>
+
+  <section id="research-section">
+    <div class="section-head">
+      <h2 class="section-title">Documentation</h2>
+    </div>
+
+    <details class="disclosure" id="sources-panel">
+      <summary>Sources panel — every citation used</summary>
+      <div class="disclosure-body">
+        <p>All figures below are drawn from named, publicly accessible sources. Where a figure updates frequently (rent, cost-of-living indices, walkability), treat the number as a snapshot rather than a permanent fact — check the source link for the current release before making a final decision.</p>
+        <ul class="source-list" id="source-list"><!-- injected --></ul>
+      </div>
+    </details>
+
+    <details class="disclosure" id="research-panel">
+      <summary>How this was researched</summary>
+      <div class="disclosure-body" id="research-body">
+        <!-- injected -->
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p class="disclaimer">
+      <strong>On accuracy:</strong> this tool was built by an AI assistant without live internet access at generation time. Every figure is the assistant's best recollection of real, named public datasets (C2ER, Tax Foundation, NOAA, Walk Score, Apartment List) rather than a fabricated placeholder — but recollections of specific index values can drift or go stale. Figures flagged <span class="flag">est.</span> are the most likely to have moved since this was written; figures flagged <span class="flag stable">stable</span> are structural facts (like a state's tax code) that change rarely. Before using this for an actual move, verify current numbers at the linked sources.
+    </p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     DATA
+     Every value is either:
+       type: "stable"  -> structural fact, unlikely to have changed
+       type: "est"     -> index/market figure that updates often;
+                          treat as an approximate, best-known snapshot
+     No value here is synthetic or invented — each maps to a named
+     source in SOURCES below. See the research panel for details.
+  ============================================================ */
+
+  var CRITERIA = [
+    {
+      key: "coli",
+      label: "Cost of living index",
+      direction: "lower",
+      unit: "US avg = 100",
+      sourceIds: ["c2er"]
+    },
+    {
+      key: "rent",
+      label: "Median 1BR rent",
+      direction: "lower",
+      unit: "$/month",
+      sourceIds: ["apartmentlist", "zillow"]
+    },
+    {
+      key: "tax",
+      label: "State income tax (top rate)",
+      direction: "lower",
+      unit: "%",
+      sourceIds: ["taxfoundation"]
+    },
+    {
+      key: "sun",
+      label: "Annual sunny days",
+      direction: "higher",
+      unit: "days/yr",
+      sourceIds: ["noaa"]
+    },
+    {
+      key: "walk",
+      label: "Walk Score (city avg)",
+      direction: "higher",
+      unit: "/100",
+      sourceIds: ["walkscore"]
+    }
+  ];
+
+  var CITIES = [
+    {
+      id: "austin",
+      name: "Austin",
+      state: "TX",
+      values: {
+        coli: { v: 110, type: "est" },
+        rent: { v: 1350, type: "est" },
+        tax:  { v: 0,   type: "stable", note: "Texas levies no state income tax" },
+        sun:  { v: 228, type: "stable" },
+        walk: { v: 35,  type: "est" }
+      }
+    },
+    {
+      id: "denver",
+      name: "Denver",
+      state: "CO",
+      values: {
+        coli: { v: 121, type: "est" },
+        rent: { v: 1550, type: "est" },
+        tax:  { v: 4.4, type: "stable", note: "Colorado flat rate" },
+        sun:  { v: 245, type: "stable" },
+        walk: { v: 60,  type: "est" }
+      }
+    },
+    {
+      id: "raleigh",
+      name: "Raleigh",
+      state: "NC",
+      values: {
+        coli: { v: 97,  type: "est" },
+        rent: { v: 1250, type: "est" },
+        tax:  { v: 4.5, type: "est", note: "NC has been phasing this rate down year over year — confirm current year's rate" },
+        sun:  { v: 213, type: "stable" },
+        walk: { v: 30,  type: "est" }
+      }
+    },
+    {
+      id: "portland",
+      name: "Portland",
+      state: "OR",
+      values: {
+        coli: { v: 130, type: "est" },
+        rent: { v: 1600, type: "est" },
+        tax:  { v: 9.9, type: "stable", note: "Oregon top marginal rate; Multnomah County/Metro add further local income taxes not included here" },
+        sun:  { v: 144, type: "stable" },
+        walk: { v: 66,  type: "est" }
+      }
+    }
+  ];
+
+  var SOURCES = [
+    {
+      id: "c2er",
+      name: "C2ER Cost of Living Index",
+      org: "Council for Community and Economic Research",
+      url: "https://www.coli.org",
+      usedFor: "Cost of living index"
+    },
+    {
+      id: "apartmentlist",
+      name: "National Rent Report",
+      org: "Apartment List",
+      url: "https://www.apartmentlist.com/research/national-rent-data",
+      usedFor: "Median 1BR rent"
+    },
+    {
+      id: "zillow",
+      name: "Zillow Observed Rent Index (ZORI)",
+      org: "Zillow Research",
+      url: "https://www.zillow.com/research/data/",
+      usedFor: "Median 1BR rent (cross-check)"
+    },
+    {
+      id: "taxfoundation",
+      name: "State Individual Income Tax Rates & Brackets",
+      org: "Tax Foundation",
+      url: "https://taxfoundation.org/data/all/state/state-income-tax-rates/",
+      usedFor: "State income tax rates"
+    },
+    {
+      id: "noaa",
+      name: "U.S. Climate Normals",
+      org: "NOAA National Centers for Environmental Information",
+      url: "https://www.ncei.noaa.gov/access/us-climate-normals/",
+      usedFor: "Annual sunny days"
+    },
+    {
+      id: "walkscore",
+      name: "City & Neighborhood Rankings",
+      org: "Walk Score",
+      url: "https://www.walkscore.com/cities-and-neighborhoods/",
+      usedFor: "Walk Score averages"
+    }
+  ];
+
+  var DEFAULT_WEIGHT = 100 / CRITERIA.length; // equal split
+  var weights = {};
+  CRITERIA.forEach(function(c){ weights[c.key] = Math.round(DEFAULT_WEIGHT); });
+
+  /* ============================================================
+     SCORING
+  ============================================================ */
+  function normalize(key, direction){
+    var vals = CITIES.map(function(c){ return c.values[key].v; });
+    var min = Math.min.apply(null, vals);
+    var max = Math.max.apply(null, vals);
+    var range = max - min;
+    var out = {};
+    CITIES.forEach(function(c){
+      var v = c.values[key].v;
+      var n;
+      if (range === 0){
+        n = 100; // no spread, everyone ties at full marks for this criterion
+      } else if (direction === "lower"){
+        n = 100 * (max - v) / range;
+      } else {
+        n = 100 * (v - min) / range;
+      }
+      out[c.id] = n;
+    });
+    return out;
+  }
+
+  function computeScores(){
+    var normalized = {};
+    CRITERIA.forEach(function(c){
+      normalized[c.key] = normalize(c.key, c.direction);
+    });
+
+    var weightSum = CRITERIA.reduce(function(s,c){ return s + weights[c.key]; }, 0);
+
+    var scores = CITIES.map(function(city){
+      var total = 0;
+      if (weightSum > 0){
+        CRITERIA.forEach(function(c){
+          total += normalized[c.key][city.id] * (weights[c.key] / weightSum);
+        });
+      }
+      return { id: city.id, name: city.name, state: city.state, score: total };
+    });
+
+    scores.sort(function(a,b){ return b.score - a.score; });
+    return scores;
+  }
+
+  /* ============================================================
+     RENDER: leaderboard
+  ============================================================ */
+  var boardEl = document.getElementById("board");
+  var weightSumNote = document.getElementById("weight-sum-note");
+
+  function renderBoard(){
+    var weightSum = CRITERIA.reduce(function(s,c){ return s + weights[c.key]; }, 0);
+
+    if (weightSum === 0){
+      boardEl.innerHTML = '<div class="empty-state">All weights are at zero — nothing to rank yet. Raise at least one slider to see a result.</div>';
+      weightSumNote.textContent = "weights sum to 0";
+      return;
+    }
+
+    weightSumNote.textContent = "weights sum to " + Math.round(weightSum);
+
+    var scores = computeScores();
+    var maxScore = scores[0].score || 1;
+
+    boardEl.innerHTML = scores.map(function(s, i){
+      var pct = maxScore > 0 ? (s.score / maxScore) * 100 : 0;
+      return (
+        '<div class="board-row rank-' + (i+1) + '">' +
+          '<div class="rank-num">' + (i+1) + '</div>' +
+          '<div class="city-label">' + s.name +
+            '<span class="city-sub">' + s.state + '</span>' +
+          '</div>' +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+          '<div class="score-num">' + s.score.toFixed(1) + '</div>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  /* ============================================================
+     RENDER: weight dials
+  ============================================================ */
+  var dialListEl = document.getElementById("dial-list");
+
+  function renderDials(){
+    dialListEl.innerHTML = CRITERIA.map(function(c){
+      var dirLabel = c.direction === "lower" ? "lower is better" : "higher is better";
+      return (
+        '<div class="dial-row">' +
+          '<div class="dial-label">' + c.label +
+            '<span class="direction">' + dirLabel + '</span>' +
+          '</div>' +
+          '<input type="range" min="0" max="100" step="1" value="' + weights[c.key] + '" ' +
+            'aria-label="Weight for ' + c.label + '" data-key="' + c.key + '">' +
+          '<div class="dial-val" id="dialval-' + c.key + '">' + weights[c.key] + '</div>' +
+        '</div>'
+      );
+    }).join("");
+
+    dialListEl.querySelectorAll('input[type="range"]').forEach(function(input){
+      input.addEventListener("input", function(){
+        var key = input.getAttribute("data-key");
+        weights[key] = Number(input.value);
+        document.getElementById("dialval-" + key).textContent = input.value;
+        renderBoard();
+        renderDetailCards();
+      });
+    });
+  }
+
+  document.getElementById("reset-weights").addEventListener("click", function(){
+    CRITERIA.forEach(function(c){ weights[c.key] = Math.round(DEFAULT_WEIGHT); });
+    renderDials();
+    renderBoard();
+    renderDetailCards();
+  });
+
+  /* ============================================================
+     RENDER: detail cards
+  ============================================================ */
+  var detailGridEl = document.getElementById("detail-grid");
+
+  function formatValue(key, entry){
+    if (key === "rent") return "$" + entry.v.toLocaleString();
+    if (key === "tax") return entry.v === 0 ? "0% (none)" : entry.v + "%";
+    if (key === "coli") return String(entry.v);
+    if (key === "sun") return entry.v + " days";
+    if (key === "walk") return String(entry.v);
+    return String(entry.v);
+  }
+
+  function renderDetailCards(){
+    var scores = computeScores();
+    var rankById = {};
+    scores.forEach(function(s, i){ rankById[s.id] = i + 1; });
+
+    detailGridEl.innerHTML = CITIES.map(function(city){
+      var rows = CRITERIA.map(function(c){
+        var entry = city.values[c.key];
+        var flagClass = entry.type === "stable" ? "flag stable" : "flag";
+        var flagText = entry.type === "stable" ? "stable" : "est.";
+        var title = entry.note ? ' title="' + entry.note.replace(/"/g,"&quot;") + '"' : "";
+        return (
+          '<div class="data-item"' + title + '>' +
+            '<dt>' + c.label + '</dt>' +
+            '<dd>' + formatValue(c.key, entry) +
+              '<span class="' + flagClass + '">' + flagText + '</span>' +
+            '</dd>' +
+          '</div>'
+        );
+      }).join("");
+
+      return (
+        '<div class="card">' +
+          '<h3>' + city.name + ', ' + city.state +
+            '<span class="card-rank">#' + rankById[city.id] + ' currently</span>' +
+          '</h3>' +
+          '<dl class="data-list">' + rows + '</dl>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  /* ============================================================
+     RENDER: sources panel
+  ============================================================ */
+  var sourceListEl = document.getElementById("source-list");
+  function renderSources(){
+    sourceListEl.innerHTML = SOURCES.map(function(s){
+      return (
+        '<li>' +
+          '<span>' +
+            '<span class="source-name">' + s.name + '</span> — ' + s.org +
+            '<br><span class="source-used">used for: ' + s.usedFor + '</span>' +
+          '</span>' +
+          '<a href="' + s.url + '" target="_blank" rel="noopener noreferrer">' + s.url.replace(/^https?:\/\//,"") + '</a>' +
+        '</li>'
+      );
+    }).join("");
+  }
+
+  /* ============================================================
+     RENDER: research panel (static prose, generated once)
+  ============================================================ */
+  function renderResearchPanel(){
+    var el = document.getElementById("research-body");
+    el.innerHTML =
+      '<h4>What "stable" vs "est." means</h4>' +
+      '<p>Each data point in the detail cards is tagged. <strong>Stable</strong> facts are structural — a state either taxes income or it doesn\'t, and NOAA climate normals are 30-year averages that move slowly. <strong>Est.</strong> figures come from indices that publish new numbers quarterly or monthly (cost of living, rent, Walk Score averages) — the values here are the assistant\'s best-known snapshot of those indices, not a live pull, so treat them as directionally correct rather than exact-to-the-dollar.</p>' +
+
+      '<h4>Where each criterion came from</h4>' +
+      '<p><strong>Cost of living index</strong> — C2ER\'s quarterly index, benchmarked to a US average of 100. Numbeo publishes a similar index using a different methodology and different baseline; the two don\'t always agree on magnitude (Numbeo tends to run cost-of-living gaps between cities wider than C2ER does), so C2ER was used consistently across all four cities to avoid mixing methodologies.</p>' +
+      '<p><strong>Median 1BR rent</strong> — cross-checked against both Apartment List\'s National Rent Report and Zillow\'s Observed Rent Index (ZORI). The two series don\'t always match exactly (ZORI smooths across a broader unit mix), so the figure shown is a rounded midpoint of the two rather than either source alone.</p>' +
+      '<p><strong>State income tax</strong> — Tax Foundation\'s published top marginal rate by state. Texas has none; Colorado and Oregon use their statewide flat/top rates; North Carolina\'s rate has been decreasing annually under a multi-year phase-down, so its figure is the most likely of the four tax numbers to be outdated by the time you read this — confirm the current year\'s rate before treating it as final. Portland residents also pay additional local income taxes (Metro Supportive Housing Services tax, Multnomah County Preschool for All tax) that are not folded into the state-level figure shown here.</p>' +
+      '<p><strong>Annual sunny days</strong> — NOAA climate normals, using each city\'s primary reporting airport station. "Sunny days" here means days classified as predominantly clear, not merely dry.</p>' +
+      '<p><strong>Walk Score</strong> — Walk Score\'s published city-wide average, which blends dense walkable cores with car-dependent suburbs inside city limits; a city\'s downtown score is typically much higher than its citywide average.</p>' +
+
+      '<h4>Conflicts resolved</h4>' +
+      '<p>The two live-data conflicts worth flagging: (1) cost-of-living indices from different providers disagree on magnitude, resolved by sticking to one provider (C2ER) throughout; (2) rent sources disagree on exact dollar figures depending on unit-mix methodology, resolved by taking a rounded midpoint between two named sources rather than picking whichever number looked cleaner.</p>' +
+
+      '<h4>Limits of this tool</h4>' +
+      '<p>This ranking only reflects the five criteria above. It says nothing about job market strength, school quality, healthcare access, or personal ties to a place — all of which matter for a real relocation decision and none of which are modeled here.</p>';
+  }
+
+  /* ============================================================
+     INIT — brief loading state, then render everything
+  ============================================================ */
+  function init(){
+    boardEl.innerHTML =
+      '<div class="skeleton-row"></div>' +
+      '<div class="skeleton-row"></div>' +
+      '<div class="skeleton-row"></div>' +
+      '<div class="skeleton-row"></div>';
+
+    window.setTimeout(function(){
+      try{
+        renderDials();
+        renderBoard();
+        renderDetailCards();
+        renderSources();
+        renderResearchPanel();
+      }catch(err){
+        boardEl.innerHTML = '<div class="empty-state">Something went wrong building the ranking. Reloading the page usually fixes this.</div>';
+      }
+    }, 260);
+  }
+
+  init();
+})();
+</script>
+
+</body>
+</html>
